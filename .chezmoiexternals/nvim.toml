@@ -1,3 +1,4 @@
 [".config/nvim"]
 type = "git-repo"
 url = "https://github.com/mgajewskik/nvim.git"
+clone.args = ["--branch", "mini"]
