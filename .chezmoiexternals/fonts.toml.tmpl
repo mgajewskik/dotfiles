@@ -1,0 +1,8 @@
+{{- if not .remote -}}
+{{- $fontDir := ".local/share/fonts" -}}
+{{- if eq .chezmoi.os "darwin" -}}{{- $fontDir = "Library/Fonts" -}}{{- end -}}
+[{{ joinPath $fontDir "JetBrainsMono" | quote }}]
+type = "archive"
+url = "https://github.com/ryanoasis/nerd-fonts/releases/download/v3.5.1/JetBrainsMono.tar.xz"
+include = ["JetBrainsMonoNerdFont-*.ttf", "JetBrainsMonoNLNerdFont-*.ttf"]
+{{- end -}}

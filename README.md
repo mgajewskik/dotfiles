@@ -34,10 +34,10 @@ Each install step re-runs only when its input changes. tmux plugins install them
 
 `chezmoi init` sets two flags:
 
-| Flag        | True when                  | Skips                                         |
-| ----------- | -------------------------- | --------------------------------------------- |
-| `container` | inside a container         | crib, devsy, crib's config                    |
-| `remote`    | in a container or over SSH | terminals, herdr's GPUI config, uwsm session  |
+| Flag        | True when                  | Skips                                                |
+| ----------- | -------------------------- | ---------------------------------------------------- |
+| `container` | inside a container         | crib, devsy, crib's config                           |
+| `remote`    | in a container or over SSH | terminals, fonts, herdr's GPUI config, uwsm session  |
 
 - `container` comes from `/run/.containerenv` (podman) or `/.dockerenv` (docker), or from `container`, `CODESPACES`,
   `REMOTE_CONTAINERS` or `KUBERNETES_SERVICE_HOST` in the environment.
@@ -253,7 +253,7 @@ devsy workspace up . --ide none --context dotfiles-test
 | ------------------------ | --------------------------------------------------------------------- |
 | `.chezmoi.toml.tmpl`     | machine detection (`container`, `remote`)                             |
 | `.chezmoiignore`         | which files each kind of machine skips                                |
-| `.chezmoiexternals/`     | downloads: mise binary, nvim config, zsh plugins                      |
+| `.chezmoiexternals/`     | downloads: mise binary, nvim config, zsh plugins, fonts               |
 | `.chezmoiscripts/`       | run-on-change installers: mise tools, yazi and herdr plugins, gpg key |
 | `dot_*`, `private_dot_*` | the dotfiles (`dot_zshrc` becomes `~/.zshrc`)                         |
 | `dot_config/mise/`       | tool list and lockfile                                                |
