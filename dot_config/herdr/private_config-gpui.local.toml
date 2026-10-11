@@ -1,0 +1,41 @@
+# Herdr GPUI overrides. Saved changes reload automatically.
+# Unset keys inherit config-gpui.toml; tables merge key by key.
+
+# New installs start with the roomy rounded sidebar. Remove this line for
+# the managed default, or pick another layout listed in config-gpui.toml.
+layout = "normal"
+theme = "Kanagawa Wave"
+
+[terminal]
+family = "JetBrainsMonoNL Nerd Font"
+size = 15.0
+
+[sidebar]
+family = "JetBrainsMonoNL Nerd Font"
+size = 15.0
+
+[tabs]
+family = "JetBrainsMonoNL Nerd Font"
+size = 15.0
+
+[ui]
+family = "JetBrainsMonoNL Nerd Font"
+size = 15.0
+
+[clipboard_toast]
+
+# Linux-style keys for commands with no ctrl+a chord. Naming a command here
+# drops its ctrl+a chord in the GUI, so chorded commands stay unlisted.
+# Copy/paste can't be rebound: copy is Ctrl+C on a selection (sway takes
+# Super+C), paste is Super+V.
+[keybindings]
+find = "ctrl-shift-f"
+command_palette = "ctrl-shift-p"
+sessions = "ctrl-shift-s"
+quit = "ctrl-shift-q"
+new_window = "ctrl-shift-n"
+clear_pane = "ctrl-shift-k"
+split_editor = "ctrl-shift-e"
+increase_font_size = ["ctrl-=", "ctrl-+"]
+decrease_font_size = "ctrl--"
+reset_font_size = "ctrl-0"

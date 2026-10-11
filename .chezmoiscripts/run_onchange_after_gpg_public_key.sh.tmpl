@@ -1,0 +1,15 @@
+#!/bin/bash
+# key hash: {{ include ".pgp-public.asc" | sha256sum }}
+
+set -euo pipefail
+
+if ! command -v gpg >/dev/null; then
+    echo "gpg not found: skipped importing my public key; after installing gnupg, re-run with:" >&2
+    echo "  chezmoi state delete-bucket --bucket=scriptState && chezmoi apply" >&2
+    exit 0
+fi
+
+KEY={{ joinPath .chezmoi.sourceDir ".pgp-public.asc" | quote }}
+gpg --batch --quiet --import "$KEY"
+FINGERPRINT="$(gpg --batch --with-colons --import-options show-only --import "$KEY" | awk -F: '$1 == "fpr" && !found { print $10; found = 1 }')"
+echo "$FINGERPRINT:6:" | gpg --batch --quiet --import-ownertrust

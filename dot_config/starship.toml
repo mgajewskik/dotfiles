@@ -1,0 +1,75 @@
+"$schema" = 'https://starship.rs/config-schema.json'
+
+# one-line prompt
+add_newline = false
+
+[line_break]
+disabled = true
+
+[character]
+success_symbol = "[➜ ](bold #92E920)"
+error_symbol = "[✗ ](bold red)"
+vimcmd_symbol = "[❮ ](bold #92E920)" # vi normal mode
+
+[username]
+style_user = "bold dimmed blue"
+
+# only over ssh
+[hostname]
+format = "[ $hostname]($style) "
+style = "bold #87A752"
+
+[cmd_duration]
+min_time = 1000
+format = "󰔛 [$duration]($style)"
+style = "bold italic #87A752"
+
+[directory]
+truncation_length = 10
+format = "[$path]($style) [$read_only]($read_only_style)"
+style = "bold #89CFF0"
+
+[git_branch]
+format = " [$symbol$branch]($style) "
+symbol = " "
+style = "bold yellow"
+
+[python]
+symbol = " "
+format = '[${symbol}${pyenv_prefix}(${version} )(\($virtualenv\) )]($style)'
+style = "bold green"
+
+[golang]
+symbol = " "
+format = "via [$symbol$version](bold cyan) "
+
+# no $version: it runs terraform version on every prompt
+[terraform]
+format = "[󱁢 $workspace]($style) "
+
+# the aws module has no directory detection and shows on every prompt once ~/.aws has credentials;
+# show the profile only while AWS_PROFILE is set (e.g. by a project's mise [env])
+[aws]
+disabled = true
+
+[env_var.AWS_PROFILE]
+symbol = "󰸏 "
+style = "bold blue"
+format = 'on [$symbol$env_value]($style) '
+
+# the current context on every prompt, so the wrong cluster is obvious
+[kubernetes]
+disabled = false
+format = '[$symbol$context( \($namespace\))]($style) '
+
+[package]
+disabled = true
+
+[nodejs]
+disabled = true
+
+[ruby]
+disabled = true
+
+[gcloud]
+disabled = true

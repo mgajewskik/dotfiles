@@ -1,0 +1,5 @@
+[dotfiles]
+repository = "https://github.com/mgajewskik/dotfiles"
+
+[workspace.env]
+GITHUB_TOKEN = "${localEnv:GITHUB_TOKEN}"

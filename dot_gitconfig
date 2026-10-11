@@ -1,0 +1,28 @@
+[user]
+	name = Maciej Gajewski
+	email = mgajewskik@gmail.com
+
+[init]
+	defaultBranch = main
+
+[pull]
+	rebase = true
+
+[push]
+	autoSetupRemote = true
+
+[fetch]
+	prune = true
+
+[merge]
+	conflictStyle = zdiff3
+
+# git diff via difftastic (structural diff, from mise); use git diff --no-ext-diff for a plain patch
+[diff]
+	external = difft
+
+[url "git@github.com:"]
+	pushInsteadOf = https://github.com/
+
+[include]
+	path = ~/.gitconfig.local

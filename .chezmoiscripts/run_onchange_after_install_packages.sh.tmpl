@@ -1,0 +1,11 @@
+#!/bin/bash
+# installs the mise tools at the versions pinned in mise.lock; re-runs when either changes
+# tools hash: {{ includeTemplate "dot_config/mise/config.toml.tmpl" . | sha256sum }}
+# lockfile hash: {{ include "dot_config/mise/private_mise.lock" | sha256sum }}
+
+set -euo pipefail
+
+# fallback: where .chezmoiexternals/mise.toml.tmpl puts it
+MISE="{{ if $m := lookPath "mise" }}{{ $m }}{{ else }}{{ joinPath .chezmoi.homeDir ".local/bin/mise" }}{{ end }}"
+
+"$MISE" bootstrap

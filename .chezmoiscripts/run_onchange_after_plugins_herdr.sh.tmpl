@@ -1,0 +1,31 @@
+#!/bin/bash
+# installs the herdr plugins listed below; re-runs when this list changes
+# herdr keeps no lockfile, so this list is the source of truth: add a plugin here, not only with `herdr plugin install`
+# reinstalling replaces the existing checkout, so re-runs are safe
+# named plugins_* to sort after install_packages, which installs herdr
+
+# to update all plugins to their latest version on the next apply, change this date
+# refreshed: 2026-10-10
+
+set -uo pipefail
+
+MISE="{{ if $m := lookPath "mise" }}{{ $m }}{{ else }}{{ joinPath .chezmoi.homeDir ".local/bin/mise" }}{{ end }}"
+
+plugins=(
+  poweroutlet2/herdr-confirm-close-pane
+  zenbu-labs/terminal-browser/herdr-plugin
+  ChmaraX/herdr-nvim
+{{- if lookPath "cargo" }}
+  thanhdat77/herdr-navigator
+{{- end }}
+)
+
+failed=()
+for plugin in "${plugins[@]}"; do
+  "$MISE" exec herdr -- herdr plugin install "$plugin" --yes || failed+=("$plugin")
+done
+
+if ((${#failed[@]})); then
+  echo "herdr plugins failed to install: ${failed[*]}" >&2
+  echo "retry each with: herdr plugin install <plugin> --yes" >&2
+fi

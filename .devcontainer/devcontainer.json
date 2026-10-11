@@ -1,0 +1,11 @@
+{
+	"name": "dotfiles-test",
+	"image": "mcr.microsoft.com/devcontainers/base:debian-13",
+	"remoteUser": "vscode",
+	"mounts": [
+		"type=bind,source=${localEnv:XDG_RUNTIME_DIR}/gnupg/S.gpg-agent.extra,target=/run/host-gpg/S.gpg-agent"
+	],
+	"onCreateCommand": "sudo apt-get update -qq && sudo apt-get install -y -qq file gnupg",
+	"postCreateCommand": "./setup.sh && .devcontainer/setup-gpg.sh",
+	"waitFor": "postCreateCommand"
+}

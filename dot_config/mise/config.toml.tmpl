@@ -1,0 +1,43 @@
+[settings]
+experimental = true
+minimum_release_age = "7d"
+
+[settings.python]
+compile = true
+
+[settings.github]
+credential_command = "gh auth token"
+
+[tools]
+"github:twpayne/chezmoi" = "latest"
+tmux = "latest"
+usage = "latest" # needed for mise completions (sourced in ~/.zshrc)
+starship = "latest"
+fzf = "latest"
+zoxide = "latest"
+eza = "latest"
+bat = "latest"
+bat-extras = "latest"
+ripgrep = "latest"
+fd = "latest"
+dust = "latest"
+yazi = "latest"
+jq = "latest"
+difftastic = "latest"
+neovim = "latest"
+tree-sitter = "latest"
+k9s = "latest"
+kubectl = "latest"
+uv = "latest"
+"github:dalance/procs" = "latest"
+gh = "latest"
+{{- if not .container }}
+"github:fgrehm/crib" = "latest"
+"github:devsy-org/devsy" = "latest"
+{{- end }}
+lazyssh = "latest"
+lazygit = "latest"
+lazyjournal = "latest"
+herdr = "latest"
+claude = "latest"
+"github:rtk-ai/rtk" = "latest"

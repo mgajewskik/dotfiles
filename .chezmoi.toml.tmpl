@@ -1,0 +1,10 @@
+{{- /* remote describes the session that ran init, not the host: check $SSH_CONNECTION at runtime instead */ -}}
+{{- /* /run/.containerenv: podman; /.dockerenv: docker. Files, unlike env vars, survive an SSH session into the container */ -}}
+{{- $container := or (env "CODESPACES" | not | not) (env "REMOTE_CONTAINERS" | not | not) (env "KUBERNETES_SERVICE_HOST" | not | not) (env "container" | not | not) (stat "/run/.containerenv" | not | not) (stat "/.dockerenv" | not | not) -}}
+{{- $remote := or $container (env "SSH_CONNECTION" | not | not) -}}
+
+sourceDir = {{ .chezmoi.sourceDir | quote }}
+
+[data]
+remote = {{ $remote }}
+container = {{ $container }}

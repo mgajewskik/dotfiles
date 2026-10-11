@@ -1,0 +1,26 @@
+# reference dotfiles kept in the repo, not applied to $HOME
+examples
+examples/**
+.work
+.work/**
+handoff
+handoff/**
+setup.sh
+README.md
+
+{{ if or .remote (ne .chezmoi.os "linux") }}
+.profile
+.zprofile
+.config/uwsm
+{{ end }}
+
+{{ if .remote }}
+.config/alacritty
+.config/kitty
+.config/ghostty
+.config/herdr/config-gpui.local.toml
+{{ end }}
+
+{{ if .container }}
+.config/crib
+{{ end }}

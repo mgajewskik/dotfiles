@@ -1,0 +1,17 @@
+theme = "Kanagawa Wave"
+
+confirm-close-surface = false
+# 100 MiB per surface
+scrollback-limit = 104857600
+working-directory = home
+window-inherit-working-directory = false
+shell-integration-features = ssh-env,ssh-terminfo
+
+gtk-single-instance = true
+gtk-titlebar = false
+window-show-tab-bar = never
+
+keybind = global:super+s=toggle_quick_terminal
+# drop the default ctrl+enter=toggle_fullscreen
+keybind = ctrl+enter=unbind
+keybind = shift+enter=text:\n

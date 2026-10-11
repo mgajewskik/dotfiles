@@ -1,0 +1,194 @@
+#!/usr/bin/env python3
+"""Unstick herdr prefix+e.
+
+A sidebar Neovim that stops answering (usually a file picker still open
+after its pane or tab is gone) makes every later toggle wait forever.
+Herdr then refuses the key once 32 toggles are stuck.
+
+This stops only Nevims that fail a 2s health check, and toggle commands
+that have already been waiting. Sidebars that still answer are left alone.
+
+Usage:
+  herdr-nvim-unstick            # reset wedged sidebars
+  herdr-nvim-unstick --dry-run  # show what would be reset
+"""
+
+import os
+import signal
+import subprocess
+import sys
+import time
+from pathlib import Path
+
+PROBE_TIMEOUT_S = 2
+STUCK_AFTER_S = 5
+
+
+def runtime_dir() -> Path:
+    override = os.environ.get("HERDR_NVIM_RUNTIME_DIR")
+    if override:
+        return Path(override)
+    xdg = os.environ.get("XDG_RUNTIME_DIR")
+    if xdg:
+        return Path(xdg) / "herdr-nvim"
+    return Path(os.environ.get("TMPDIR", "/tmp")) / "herdr-nvim"
+
+
+def ps_rows():
+    out = subprocess.check_output(["ps", "-eo", "pid,ppid,etimes,args"], text=True)
+    rows = []
+    for line in out.splitlines()[1:]:
+        pid, ppid, etimes, args = line.split(None, 3)
+        rows.append((int(pid), int(ppid), int(etimes), args))
+    return rows
+
+
+def descendants(rows, root):
+    by_parent = {}
+    for pid, ppid, _et, _args in rows:
+        by_parent.setdefault(ppid, []).append(pid)
+    found = []
+    pending = list(by_parent.get(root, []))
+    while pending:
+        pid = pending.pop()
+        found.append(pid)
+        pending.extend(by_parent.get(pid, []))
+    return found
+
+
+def daemon_pid(rows, sock: Path):
+    needle = str(sock)
+    for pid, _ppid, _et, args in rows:
+        if "--listen" in args and needle in args:
+            return pid
+    return None
+
+
+def kill(pid, sig):
+    try:
+        os.kill(pid, sig)
+        return True
+    except ProcessLookupError:
+        return False
+    except PermissionError as error:
+        print(f"cannot signal {pid}: {error}", file=sys.stderr)
+        print("Run this from a normal terminal, not an agent shell.", file=sys.stderr)
+        raise
+
+
+def probe(sock: Path):
+    proc = subprocess.run(
+        [
+            "timeout",
+            str(PROBE_TIMEOUT_S),
+            "nvim",
+            "--headless",
+            "--server",
+            str(sock),
+            "--remote-expr",
+            "1+1",
+        ],
+        capture_output=True,
+        text=True,
+    )
+    return proc.returncode == 0 and proc.stdout.strip() == "2"
+
+
+def stuck_pids(rows):
+    found = []
+    for pid, _ppid, etimes, args in rows:
+        if etimes < STUCK_AFTER_S:
+            continue
+        waiting = args.endswith("herdr-nvim toggle") or (
+            "--remote-expr" in args and "/herdr-nvim/" in args
+        )
+        if waiting:
+            found.append(pid)
+    return found
+
+
+def wait_gone(pid, seconds=2.5):
+    deadline = time.monotonic() + seconds
+    while time.monotonic() < deadline:
+        if not Path(f"/proc/{pid}").exists():
+            return True
+        time.sleep(0.1)
+    return not Path(f"/proc/{pid}").exists()
+
+
+def stop_pids(pids):
+    for pid in pids:
+        kill(pid, signal.SIGTERM)
+    survivors = [pid for pid in pids if not wait_gone(pid)]
+    for pid in survivors:
+        print(f"SIGKILL {pid}")
+        kill(pid, signal.SIGKILL)
+    time.sleep(0.2)
+    return [pid for pid in pids if Path(f"/proc/{pid}").exists()]
+
+
+def main():
+    dry_run = "--dry-run" in sys.argv or "-n" in sys.argv
+    sockets = sorted(runtime_dir().glob("*.sock")) if runtime_dir().is_dir() else []
+    rows = ps_rows()
+
+    healthy = []
+    wedged = []
+    stale = []
+    for sock in sockets:
+        key = sock.stem
+        pid = daemon_pid(rows, sock)
+        if probe(sock):
+            healthy.append((key, pid))
+            continue
+        if pid is None:
+            stale.append((key, sock))
+        else:
+            wedged.append((key, pid, sock, descendants(rows, pid)))
+
+    stuck = stuck_pids(rows)
+    if not wedged and not stale and not stuck:
+        print(f"Nothing to reset. {len(healthy)} sidebar(s) answer.")
+        return 0
+
+    print(f"answering: {len(healthy)}")
+    for key, pid in healthy:
+        print(f"  keep {key} pid={pid}")
+    for key, pid, _sock, kids in wedged:
+        print(f"  reset {key} pid={pid} children={len(kids)} (no answer in {PROBE_TIMEOUT_S}s)")
+    for key, _sock in stale:
+        print(f"  remove stale socket {key}")
+    if stuck:
+        print(f"  stop {len(stuck)} toggle(s) waiting longer than {STUCK_AFTER_S}s")
+
+    if dry_run:
+        print("dry-run: nothing stopped")
+        return 0
+
+    # Waiting toggles call qa! once a Neovim answers. Stop them first.
+    still = stop_pids(stuck)
+    for key, pid, sock, kids in wedged:
+        still.extend(stop_pids(list(reversed(kids)) + [pid]))
+        if Path(f"/proc/{pid}").exists():
+            print(f"{key} still alive; left its socket in place")
+            continue
+        if sock.exists():
+            sock.unlink()
+            print(f"removed {sock}")
+    for _key, sock in stale:
+        if sock.exists():
+            sock.unlink()
+            print(f"removed {sock}")
+
+    if still:
+        print(f"still running: {still}")
+        return 1
+    print("done. Press ctrl+a e once.")
+    return 0
+
+
+if __name__ == "__main__":
+    try:
+        sys.exit(main())
+    except PermissionError:
+        sys.exit(1)

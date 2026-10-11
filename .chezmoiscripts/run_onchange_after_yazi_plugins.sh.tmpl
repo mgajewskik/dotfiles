@@ -1,0 +1,10 @@
+#!/bin/bash
+# installs the yazi plugins and flavors pinned in ~/.config/yazi/package.toml; re-runs when it changes
+# package.toml hash: {{ include "dot_config/yazi/package.toml" | sha256sum }}
+
+set -euo pipefail
+
+# fallback: where .chezmoiexternals/mise.toml.tmpl puts it
+MISE="{{ if $m := lookPath "mise" }}{{ $m }}{{ else }}{{ joinPath .chezmoi.homeDir ".local/bin/mise" }}{{ end }}"
+
+"$MISE" exec yazi -- ya pkg install

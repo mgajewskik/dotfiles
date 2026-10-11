@@ -1,0 +1,204 @@
+HISTFILE="$HOME/.zsh_history"
+HISTSIZE=290000
+SAVEHIST=$HISTSIZE
+setopt extended_history     # save a timestamp with each command
+setopt share_history        # share history between open terminals
+setopt hist_ignore_all_dups # keep only the newest copy of a repeated command
+setopt hist_ignore_space    # do not save commands that start with a space
+
+# vi mode
+bindkey -v
+export KEYTIMEOUT=1 # switch modes faster
+
+# Up/Down and j/k search history for commands starting with what is typed
+autoload -Uz up-line-or-beginning-search down-line-or-beginning-search
+zle -N up-line-or-beginning-search
+zle -N down-line-or-beginning-search
+bindkey '^[[A' up-line-or-beginning-search
+bindkey '^[[B' down-line-or-beginning-search
+bindkey -M vicmd 'k' up-line-or-beginning-search
+bindkey -M vicmd 'j' down-line-or-beginning-search
+
+export EDITOR=nvim
+export VISUAL=nvim
+export LANG="${LANG:-C.UTF-8}"
+export GPG_TTY="$(tty)"
+export BAT_THEME=ansi
+
+typeset -U path fpath
+
+path=("$HOME/.local/bin" $path "$HOME/.cargo/bin" "$HOME/go/bin" "$HOME/scripts")
+path+=("$HOME/.tmux/plugins/tmux-session-wizard/bin")
+
+if command -v mise > /dev/null ; then
+  eval "$(mise activate zsh)"
+fi
+
+autoload -Uz compinit && compinit
+if command -v mise > /dev/null ; then
+  source <(mise completion zsh) # uses the usage tool
+fi
+zstyle ':completion:*' matcher-list 'm:{a-z}={A-Z}' # case-insensitive completion
+zstyle ':completion:*' menu no # let fzf-tab handle the completion menu
+
+if command -v starship > /dev/null ; then
+  eval "$(starship init zsh)"
+fi
+
+# fzf-tab: Tab opens completions in fzf. Load it before fzf so fzf's **<Tab> falls back to it.
+if [[ -r "$HOME/.zsh/fzf-tab/fzf-tab.plugin.zsh" ]] ; then
+  source "$HOME/.zsh/fzf-tab/fzf-tab.plugin.zsh"
+  zstyle ':fzf-tab:complete:cd:*' fzf-preview 'eza -1 --color=always $realpath'
+fi
+
+# Ctrl-R history, Ctrl-T files, Alt-C subdirectories, **<Tab> fuzzy completion
+if command -v fzf > /dev/null ; then
+  source <(fzf --zsh)
+fi
+
+# cd foo jumps to the most used visited directory matching foo, cdi picks one with fzf
+if command -v zoxide > /dev/null ; then
+  eval "$(zoxide init zsh --cmd cd)"
+fi
+
+if command -v crib > /dev/null ; then
+  source <(crib completion zsh)
+
+  crib() { GITHUB_TOKEN="$GITHUB_READONLY" command crib "$@"; }
+fi
+
+if command -v kubectl > /dev/null ; then
+  source <(kubectl completion zsh 2> /dev/null)
+  alias k="kubectl"
+  alias ka="kubectl apply -f"
+  alias kns="kubectl config set-context --current --namespace"
+
+  export dry=" -o yaml --dry-run=client -o yaml"
+  export now="--force --grace-period=0"
+
+  alias bb="k run busybox --image=busybox:latest --restart=Never --rm -it --command -- "
+
+  function kctx() {
+      found=0
+      for c in $(kubectl config get-contexts --no-headers -o name); do
+          if [[ $c == $1 ]]; then
+              found=1
+          fi
+      done
+      if [[ $found == 0 ]]; then
+          echo "Context $1 not found"
+          return 1
+      fi
+      echo "Switching to context $1 and setting up aliases"
+  
+      BASE="kubectl --context=$1"
+  
+      alias k="$BASE"
+      alias kg="$BASE get"
+      alias ke="$BASE edit"
+      alias kgp="$BASE get pod"
+      alias kde="$BASE describe"
+  }
+fi
+
+if command -v k3d > /dev/null ; then
+  source <(k3d completion zsh 2> /dev/null)
+fi
+
+if command -v herdr > /dev/null ; then
+  source <(herdr completion zsh)
+fi
+
+if command -v aws_completer > /dev/null ; then
+  autoload -Uz bashcompinit && bashcompinit
+  complete -C aws_completer aws
+fi
+
+if [[ -x "$HOME/.grok/bin/grok" ]] ; then
+  path=("$HOME/.grok/bin" $path)
+  fpath=("$HOME/.grok/completions/zsh" $fpath)
+  grok() { HERDR_AGENT=grok command grok "$@"; }
+fi
+
+export FZF_DEFAULT_COMMAND='rg --files --no-ignore --hidden -g "!{.git/*,.tox/*,venv/*,.venv/*,.pyenv/*,*.pyi,*.pyc,__pycache__/*,.cache/*,.mypy_cache/*}" 2> /dev/null'
+export FZF_CTRL_T_COMMAND="$FZF_DEFAULT_COMMAND"
+export FZF_DEFAULT_OPTS="
+--ansi
+--layout=reverse
+--height=50%
+--multi
+--preview-window=right:60%,sharp,cycle
+--preview '([[ -f {} ]] && (bat --force-colorization --style=changes --paging=never --line-range :500 {} || cat {})) || ([[ -d {} ]] && (tree -C {} | less)) || echo {} 2> /dev/null | head -200'
+--prompt='λ -> '
+--pointer='|>'
+--marker='✓'
+--bind 'ctrl-s:select-all'
+--bind 'ctrl-e:execute(nvim {} < /dev/tty > /dev/tty 2>&1)'
+--bind 'ctrl-v:execute(nvim {+})'"
+
+# aliases
+alias ls="eza --git --icons --group-directories-first --time-style=long-iso --group"
+alias cat="bat"
+alias man="batman"
+alias bd="batdiff"
+alias rg="batgrep"
+alias v="nvim"
+alias vi="nvim"
+alias ..="cd .."
+alias -- -="cd -"
+alias myip="curl https://ipinfo.io"
+alias "??"="$HOME/scripts/duck"
+alias "?"="$HOME/scripts/fabric_query"
+alias psgrep="ps aux | grep -v grep | grep -i -e VSZ -e"
+alias pss="ps --ppid 2 -p 2 --deselect -o pid,user,stat,tty,%cpu,%mem,time,etime,args --sort=pid"
+alias pst="ps --ppid 2 -p 2 --deselect --forest -o pid,user,stat,etime,args"
+alias ports="ss -tlnp"
+
+alias ta="tmux attach -t"
+alias tad='tmux attach -d -t'
+alias ts="tmux new-session -s"
+alias tl="tmux list-sessions"
+alias tksv='tmux kill-server'
+alias tkss='tmux kill-session -t'
+
+alias c="chezmoi"
+alias mr="mise run"
+alias run="./run"
+
+# list the directory after every cd
+chpwd() {
+  eza --git --icons --group-directories-first --time-style=long-iso --group
+}
+
+# decode JWT token and return header and payload
+decode() {
+    jq -R 'split(".") | select(length > 0) | .[0],.[1] | @base64d | fromjson' <<< "$1"
+}
+
+# yazi, then cd to the directory it exits in
+y() {
+  local tmp="$(mktemp -t "yazi-cwd.XXXXXX")" cwd
+  yazi "$@" --cwd-file="$tmp"
+  if cwd="$(command cat -- "$tmp")" && [ -n "$cwd" ] && [ "$cwd" != "$PWD" ]; then
+    builtin cd -- "$cwd"
+  fi
+  rm -f -- "$tmp"
+}
+
+# Per-directory history: a mise [env] HISTFILE swaps the file on cd
+_histfile_current="$HISTFILE"
+_sync_histfile() {
+  # read the target first: mise unsets HISTFILE when leaving, and fc -P overwrites it
+  local target="${HISTFILE:-$HOME/.zsh_history}"
+  [[ "$target" == "$_histfile_current" ]] && return
+  HISTFILE="$_histfile_current" # fc -P saves the outgoing list here, not into the target
+  fc -P 2> /dev/null            # the stack is empty on the first switch
+  fc -p "$target"
+  _histfile_current="$target"
+}
+precmd_functions+=(_sync_histfile)
+
+# syntax highlighting must load last
+if [[ -r "$HOME/.zsh/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh" ]] ; then
+  source "$HOME/.zsh/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh"
+fi

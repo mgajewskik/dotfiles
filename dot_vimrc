@@ -1,0 +1,9 @@
+" a ~/.vimrc stops vim loading its defaults (Esc delay, incsearch, scrolloff, syntax, filetype); load them first
+unlet! skip_defaults_vim
+source $VIMRUNTIME/defaults.vim
+
+set background=dark
+set relativenumber
+set tabstop=4 softtabstop=4 shiftwidth=4 expandtab
+set autoindent
+set hlsearch ignorecase smartcase

@@ -1,0 +1,26 @@
+# Only `columns` is required; everything else falls back to the
+# defaults printed by `procs --gen-config`.
+
+columns = [
+  { kind = "Pid",         style = "BrightYellow|Yellow",   numeric_search = true },
+  { kind = "User",        style = "BrightGreen|Green",     nonnumeric_search = true },
+  { kind = "Separator",   style = "White|BrightBlack" },
+  { kind = "State",       style = "ByState" },
+  { kind = "Tty",         style = "BrightWhite|Black" },
+  { kind = "UsageCpu",    style = "ByPercentage",          align = "Right" },
+  { kind = "UsageMem",    style = "ByPercentage",          align = "Right" },
+  { kind = "CpuTime",     style = "BrightCyan|Cyan" },
+  { kind = "ElapsedTime", style = "BrightMagenta|Magenta" },
+  { kind = "TcpPort",     style = "BrightCyan|Cyan",       numeric_search = true }, # `procs 8080` finds the listener
+  { kind = "MultiSlot",   style = "ByUnit",                align = "Right" },      # where `-i/--insert <column>` goes
+  { kind = "Separator",   style = "White|BrightBlack" },
+  { kind = "Command",     style = "BrightWhite|Black",     nonnumeric_search = true },
+]
+
+[display]
+show_kthreads = false # hide [kworker/…] and other kernel threads
+
+# Newest processes first
+[sort]
+column = 0
+order = "Descending"
