@@ -24,6 +24,7 @@ export VISUAL=nvim
 export LANG="${LANG:-C.UTF-8}"
 export GPG_TTY="$(tty)"
 export BAT_THEME=ansi
+export SHELL="${commands[zsh]:-$SHELL}"
 
 typeset -U path fpath
 
@@ -90,9 +91,9 @@ if command -v kubectl > /dev/null ; then
           return 1
       fi
       echo "Switching to context $1 and setting up aliases"
-  
+
       BASE="kubectl --context=$1"
-  
+
       alias k="$BASE"
       alias kg="$BASE get"
       alias ke="$BASE edit"
