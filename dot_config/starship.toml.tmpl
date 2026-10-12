@@ -1,10 +1,13 @@
 "$schema" = 'https://starship.rs/config-schema.json'
 
-# one-line prompt
+format = "$container$all"
 add_newline = false
 
+[container]
+format = "[$symbol $name]($style) "
+
 [line_break]
-disabled = true
+disabled = {{ or .container (not .remote) }}
 
 [character]
 success_symbol = "[➜ ](bold #92E920)"
@@ -13,9 +16,11 @@ vimcmd_symbol = "[❮ ](bold #92E920)" # vi normal mode
 
 [username]
 style_user = "bold dimmed blue"
+format = "([$user]($style) in )"
+aliases = { {{ .chezmoi.username | quote }} = "" }
 
-# only over ssh
 [hostname]
+disabled = {{ .container }}
 format = "[ $hostname]($style) "
 style = "bold #87A752"
 
@@ -57,9 +62,9 @@ symbol = "󰸏 "
 style = "bold blue"
 format = 'on [$symbol$env_value]($style) '
 
-# the current context on every prompt, so the wrong cluster is obvious
 [kubernetes]
 disabled = false
+detect_env_vars = ["KUBECONFIG"]
 format = '[$symbol$context( \($namespace\))]($style) '
 
 [package]
