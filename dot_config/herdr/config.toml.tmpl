@@ -23,6 +23,11 @@ enabled = false
 [advanced]
 scrollback_limit_bytes = 100000000
 
+{{- with lookPath "zsh" }}
+[terminal]
+default_shell = {{ . | quote }}
+{{- end }}
+
 [experimental]
 kitty_graphics = true
 pane_history = true
@@ -46,7 +51,7 @@ next_tab = "prefix+tab"
 switch_workspace = "prefix+shift+1..9"
 close_pane = ""
 # Was prefix+b. Browser takes that chord.
-toggle_sidebar = "prefix+shift+b"
+toggle_sidebar = ["prefix+t", "prefix+shift+b"]
 # Were prefix+e / prefix+o. herdr-gpui runs these defaults before the
 # [[keys.command]] plugin chords below, so they hid herdr-nvim and jump-back.
 edit_scrollback = "prefix+shift+e"
