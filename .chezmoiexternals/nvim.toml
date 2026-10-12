@@ -2,3 +2,4 @@
 type = "git-repo"
 url = "https://github.com/mgajewskik/nvim.git"
 clone.args = ["--branch", "mini"]
+pull.args = ["--ff-only"]

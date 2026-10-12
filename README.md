@@ -57,10 +57,11 @@ To check: `chezmoi data | grep -E '"(remote|container)"'`. Setting up a desktop 
 | see what apply would change        | `chezmoi diff`                                |
 | commit and push                    | `chezmoi cd`, then git as usual               |
 | pull and apply on another machine  | `chezmoi update`                              |
-| update nvim config and zsh plugins | `chezmoi apply --refresh-externals`           |
+| same, plus nvim config and plugins | `chezmoi update -R -k`                        |
 
 `c` is my alias for `chezmoi`. The zsh plugins also refresh weekly on their own. The nvim config is its own repo:
-I commit and push it from `~/.config/nvim`.
+I commit and push it from `~/.config/nvim`. `-R` fast-forwards it only when it has no local changes; otherwise git
+refuses, and `-k` keeps that error from stopping the rest of the apply.
 
 What I set up, in short:
 
