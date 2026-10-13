@@ -1,4 +1,4 @@
-HISTFILE="$HOME/.zsh_history"
+HISTFILE="${HISTFILE:-$HOME/.zsh_history}"
 HISTSIZE=290000
 SAVEHIST=$HISTSIZE
 setopt extended_history     # save a timestamp with each command
@@ -187,10 +187,11 @@ y() {
 }
 
 # Per-directory history: a mise [env] HISTFILE swaps the file on cd
+_histfile_default="$HISTFILE"
 _histfile_current="$HISTFILE"
 _sync_histfile() {
   # read the target first: mise unsets HISTFILE when leaving, and fc -P overwrites it
-  local target="${HISTFILE:-$HOME/.zsh_history}"
+  local target="${HISTFILE:-$_histfile_default}"
   [[ "$target" == "$_histfile_current" ]] && return
   HISTFILE="$_histfile_current" # fc -P saves the outgoing list here, not into the target
   fc -P 2> /dev/null            # the stack is empty on the first switch
