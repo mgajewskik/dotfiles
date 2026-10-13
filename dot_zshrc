@@ -67,6 +67,18 @@ if command -v crib > /dev/null ; then
   source <(crib completion zsh)
 
   crib() { GITHUB_TOKEN="$GITHUB_READONLY" command crib "$@"; }
+
+  claude-path() {
+    local root=$PWD
+    while [[ $root != / && ! -e $root/.devcontainer/devcontainer.json && ! -e $root/.devcontainer.json ]]; do
+      root=${root:h}
+    done
+    [[ $root == / ]] && root=$PWD
+    local key="/workspaces/${root:t}${PWD#$root}"
+    key=${key//[^A-Za-z0-9]/-}
+    mkdir -p "$HOME/.claude/projects/$key"
+    print -r -- "\"type=bind,source=\${localEnv:HOME}/.claude/projects/$key,target=/home/vscode/.claude/projects/$key\""
+  }
 fi
 
 if command -v kubectl > /dev/null ; then

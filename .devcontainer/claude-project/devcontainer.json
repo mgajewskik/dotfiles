@@ -1,0 +1,8 @@
+{
+	"name": "claude-project",
+	"image": "mcr.microsoft.com/devcontainers/base:debian-13",
+	"remoteUser": "vscode",
+	"mounts": [
+		"type=bind,source=${localEnv:HOME}/.claude/projects/-workspaces-myproject,target=/home/vscode/.claude/projects/-workspaces-myproject"
+	]
+}

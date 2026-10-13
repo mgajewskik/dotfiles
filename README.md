@@ -180,6 +180,30 @@ publishing), since my SSH agent and credentials reach outside. Those rules match
 guardrail, not a boundary: `plugins.disable = ssh` in `.cribrc` is the boundary for code I don't trust. The project
 and its Claude memory are mounted from the host, so a `git reset --hard` or `rm -rf` in there loses host work too.
 
+Claude keeps a project's memory and sessions in `~/.claude/projects/<key>`, the path with non-alphanumerics as `-`.
+crib mounts the project at `/workspaces/<project folder>`, so in a container that is `-workspaces-<project>...`. To
+keep it, I mount that one folder from my host's `~/.claude/projects`:
+
+```sh
+mkdir -p .devcontainer && cp ~/.local/share/chezmoi/.devcontainer/claude-project/devcontainer.json .devcontainer/
+claude-path       # in each directory I start Claude in: prints the mount line and creates the host folder
+```
+
+and replace the example's mount with the printed lines. In a workspace holding several repos, I run it in each repo
+(memory is keyed by the git root, sessions by the directory Claude starts in). Then `crib up && crib shell`.
+
+crib copies my host login (`~/.claude/.credentials.json`) in on every `up`, `restart` and `rebuild`. The container's
+state sits next to the host's own projects but under its own name, so host Claude in the same checkout keeps
+separate memory; renaming the folder moves it over.
+
+Changing the definition never costs the project, its Claude memory, shell history or login; the container's own files
+(anything installed after creation) go with it:
+
+| I changed                               | I run          | What happens                                             |
+| --------------------------------------- | -------------- | -------------------------------------------------------- |
+| mounts, env, ports, `runArgs`, the user | `crib restart` | container recreated, creation hooks skipped              |
+| image, Dockerfile, features, build args | `crib rebuild` | new image, fresh container, my dotfiles installed again  |
+
 ### Flags only, no saved config
 
 devsy takes everything as flags; only the provider must be added once (`--provider` picks among added ones):
@@ -272,5 +296,5 @@ devsy workspace up . --ide none --context dotfiles-test
 | `dot_*`, `private_dot_*` | the dotfiles (`dot_zshrc` becomes `~/.zshrc`)                         |
 | `dot_config/mise/`       | tool list and lockfile                                                |
 | `setup.sh`               | container entry point                                                 |
-| `.devcontainer/`         | test container and the per-family sandboxes                           |
+| `.devcontainer/`         | test container, per-family sandboxes, Claude project example          |
 | `.pgp-public.asc`        | my gpg public key                                                     |
