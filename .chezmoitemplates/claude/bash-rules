@@ -1,0 +1,10 @@
+{{- $rules := list -}}
+{{- $rtk := list -}}
+{{- range . -}}
+{{-   $rules = append $rules (printf "Bash(%s)" .) -}}
+{{-   if not (hasPrefix "*" .) -}}
+{{-     $rtk = append $rtk (printf "Bash(rtk %s)" .) -}}
+{{-     $rtk = append $rtk (printf "Bash(rtk * %s)" .) -}}
+{{-   end -}}
+{{- end -}}
+{{- concat $rules $rtk | toJson -}}

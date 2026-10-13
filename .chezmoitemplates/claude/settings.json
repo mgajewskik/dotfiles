@@ -1,0 +1,162 @@
+{{- $rules := dict
+      "deny" (includeTemplate "claude/bash-rules" .claude.permissions.deny | fromJson)
+      "remote" (includeTemplate "claude/bash-rules" .claude.permissions.remote | fromJson)
+      "ask" (includeTemplate "claude/bash-rules" .claude.permissions.ask | fromJson) -}}
+{
+  "owned": {
+    "$schema": "https://json.schemastore.org/claude-code-settings.json",
+    "env": {
+      "CLAUDE_BASH_MAINTAIN_PROJECT_WORKING_DIR": "true"
+    },
+    "attribution": {
+      "commit": "",
+      "pr": "",
+      "sessionUrl": false
+    },
+    "permissions": {
+      "allow": [
+        "mcp__context7",
+        "WebFetch",
+        "WebFetch(domain:*)"
+      ],
+      "additionalDirectories": [
+        "~/.agents/skills"
+      ],
+{{- if .container }}
+      "defaultMode": "bypassPermissions",
+      "ask": {{ $rules.remote | toJson }}
+{{- else }}
+      "defaultMode": "auto",
+      "deny": {{ concat (list "Read(~/.ssh/**)" "Read(~/.aws/**)" "Read(~/.gnupg/**)") $rules.deny $rules.remote | toJson }},
+      "ask": {{ $rules.ask | toJson }}
+{{- end }}
+    },
+    "hooks": {
+      "PreToolUse": [
+{{- if not .container }}
+        {
+          "matcher": "Edit|Write|NotebookEdit",
+          "hooks": [
+            {
+              "type": "command",
+              "command": "bash \"$HOME/.claude/hooks/block-writes-outside-cwd.sh\""
+            }
+          ]
+        },
+{{- end }}
+        {
+          "matcher": "Bash",
+          "hooks": [
+            {
+              "type": "command",
+              "command": "rtk hook claude"
+{{- if not .container }}
+            },
+            {
+              "type": "command",
+              "command": "bash \"$HOME/.claude/hooks/block-cd-heredoc.sh\""
+{{- end }}
+            }
+          ]
+        }
+      ],
+      "SessionStart": [
+        {
+          "matcher": "^(startup|resume|clear|compact|fork)$",
+          "hooks": [
+            {
+              "type": "command",
+              "command": "bash '{{ .chezmoi.homeDir }}/.claude/hooks/herdr-agent-state.sh' session",
+              "timeout": 10
+            }
+          ]
+        }
+      ]
+    },
+{{- if .container }}
+    "sandbox": {
+      "enabled": false
+    },
+{{- else }}
+    "sandbox": {
+      "enabled": true,
+      "failIfUnavailable": true,
+      "allowUnsandboxedCommands": false,
+      "filesystem": {
+        "allowWrite": [
+          "/tmp",
+          "/var/tmp",
+          "~/.cache",
+          "~/.local/share/mise",
+          "~/.local/state/mise",
+          "~/.local/share/uv",
+          "~/.local/share/rtk",
+          "~/go/pkg",
+          "~/.ansible"
+        ]
+      }
+    },
+{{- end }}
+    "statusLine": {
+      "type": "command",
+      "command": "~/.claude/statusline.sh"
+    },
+    "extraKnownMarketplaces": {
+      "claude-plugins-official": {
+        "source": {
+          "source": "github",
+          "repo": "anthropics/claude-plugins-official"
+        }
+      },
+      "personal": {
+        "source": {
+          "source": "directory",
+          "path": "{{ .chezmoi.homeDir }}/.claude/local-plugins"
+        }
+      }
+    },
+    "pluginConfigs": {
+      "agents-md@builtin": {
+        "options": {
+          "instructionFiles": "claude-md-and-agents-md"
+        }
+      }
+    },
+    "skillOverrides": {
+      "plantuml-diagrams": "off"
+    },
+    "bashEditDiffEnabled": false,
+    "autoMemoryEnabled": true,
+{{- if .container }}
+    "voice": {
+      "enabled": false
+    },
+    "voiceEnabled": false,
+{{- end }}
+    "skipDangerousModePermissionPrompt": true
+  },
+  "defaults": {
+    "model": "opus[1m]",
+    "modelSettings": {
+      "claude-opus-5-5": {
+        "effortLevel": "high"
+      }
+    },
+    "enabledPlugins": {
+      "gopls-lsp@claude-plugins-official": true,
+      "rust-analyzer-lsp@claude-plugins-official": true,
+      "lua-lsp@claude-plugins-official": true,
+      "terraform-lsp@personal": true
+    },
+    "autoCompactWindow": 400000,
+    "tui": "fullscreen",
+    "theme": "dark",
+    "voice": {
+      "enabled": true,
+      "mode": "hold"
+    },
+    "voiceEnabled": true,
+    "agentPushNotifEnabled": true,
+    "inputNeededNotifEnabled": true
+  }
+}

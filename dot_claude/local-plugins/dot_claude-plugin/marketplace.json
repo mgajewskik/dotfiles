@@ -1,0 +1,14 @@
+{
+  "name": "personal",
+  "description": "Personal local plugins",
+  "owner": {
+    "name": "Maciej Gajewski"
+  },
+  "plugins": [
+    {
+      "name": "terraform-lsp",
+      "source": "./terraform-lsp",
+      "description": "Terraform language server (terraform-ls from PATH)"
+    }
+  ]
+}

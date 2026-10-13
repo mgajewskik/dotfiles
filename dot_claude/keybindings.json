@@ -1,0 +1,21 @@
+{
+  "$schema": "https://www.schemastore.org/claude-code-keybindings.json",
+  "$docs": "https://code.claude.com/docs/en/keybindings",
+  "bindings": [
+    {
+      "context": "Chat",
+      "bindings": {
+        "ctrl+e": "chat:externalEditor",
+        "space": null,
+        "ctrl+space": "voice:pushToTalk"
+      }
+    },
+    {
+      "context": "Scroll",
+      "bindings": {
+        "ctrl+u": "scroll:halfPageUp",
+        "ctrl+d": "scroll:halfPageDown"
+      }
+    }
+  ]
+}

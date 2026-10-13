@@ -23,8 +23,11 @@ What `chezmoi apply` does:
 - writes my dotfiles, minus the ones this kind of machine has no use for (next section);
 - installs my [mise](https://mise.jdx.dev/) tools at the versions in `~/.config/mise/mise.lock`, downloading mise
   first if missing. The lockfile holds URLs and checksums, so no GitHub token needed;
-- clones my [nvim config](https://github.com/mgajewskik/nvim) to `~/.config/nvim` and downloads the zsh plugins
+- clones my [nvim config](https://github.com/mgajewskik/nvim) to `~/.config/nvim` and my
+  [agent skills](https://github.com/mgajewskik/skills) to `~/.agents/skills`, and downloads the zsh plugins
   (fzf-tab, zsh-syntax-highlighting) to `~/.zsh`;
+- writes my Claude Code config to `~/.claude`: sandboxed and guarded on a host, unrestricted in a container
+  ([Claude in a container](#claude-in-a-project-container));
 - installs my yazi and herdr plugins;
 - imports my gpg public key with ultimate trust.
 
@@ -57,7 +60,7 @@ To check: `chezmoi data | grep -E '"(remote|container)"'`. Setting up a desktop 
 | see what apply would change        | `chezmoi diff`                                |
 | commit and push                    | `chezmoi cd`, then git as usual               |
 | pull and apply on another machine  | `chezmoi update`                              |
-| same, plus nvim config and plugins | `chezmoi update -R -k`                        |
+| same, plus nvim, skills, plugins   | `chezmoi update -R -k`                        |
 
 `c` is my alias for `chezmoi`. The zsh plugins also refresh weekly on their own. The nvim config is its own repo:
 I commit and push it from `~/.config/nvim`. `-R` fast-forwards it only when it has no local changes; otherwise git
@@ -169,6 +172,14 @@ their git with `echo .cribrc >> .git/info/exclude`. One setting per line:
 crib passes my host's `$GITHUB_READONLY` into the container as `GITHUB_TOKEN` (the `crib` wrapper in `.zshrc`);
 without it the container gets no token.
 
+### Claude in a project container
+
+In a container, Claude runs without a sandbox and without prompts: it installs and changes whatever it likes inside.
+It still asks before the `remote` patterns in `.chezmoidata/claude.yaml` (force push, deleting repos or cloud resources,
+publishing), since my SSH agent and credentials reach outside. Those rules match the start of a command, so they are a
+guardrail, not a boundary: `plugins.disable = ssh` in `.cribrc` is the boundary for code I don't trust. The project
+and its Claude memory are mounted from the host, so a `git reset --hard` or `rm -rf` in there loses host work too.
+
 ### Flags only, no saved config
 
 devsy takes everything as flags; only the provider must be added once (`--provider` picks among added ones):
@@ -254,7 +265,9 @@ devsy workspace up . --ide none --context dotfiles-test
 | ------------------------ | --------------------------------------------------------------------- |
 | `.chezmoi.toml.tmpl`     | machine detection (`container`, `remote`)                             |
 | `.chezmoiignore`         | which files each kind of machine skips                                |
-| `.chezmoiexternals/`     | downloads: mise binary, nvim config, zsh plugins, fonts               |
+| `.chezmoiexternals/`     | downloads: mise binary, nvim config, skills, zsh plugins, fonts       |
+| `.chezmoidata/claude.yaml`  | Claude Bash permission patterns (deny, remote, ask)                |
+| `.chezmoitemplates/claude/` | Claude `settings.json`, built from those patterns                  |
 | `.chezmoiscripts/`       | run-on-change installers: mise tools, yazi and herdr plugins, gpg key |
 | `dot_*`, `private_dot_*` | the dotfiles (`dot_zshrc` becomes `~/.zshrc`)                         |
 | `dot_config/mise/`       | tool list and lockfile                                                |

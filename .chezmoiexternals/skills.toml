@@ -1,0 +1,4 @@
+[".agents/skills"]
+type = "git-repo"
+url = "https://github.com/mgajewskik/skills.git"
+pull.args = ["--ff-only"]
