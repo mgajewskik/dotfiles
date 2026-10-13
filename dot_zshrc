@@ -29,7 +29,7 @@ export SHELL="${commands[zsh]:-$SHELL}"
 
 typeset -U path fpath
 
-path=("$HOME/.local/bin" $path "$HOME/.cargo/bin" "$HOME/go/bin" "$HOME/scripts")
+path=("$HOME/.local/bin" $path "$HOME/.cargo/bin" "$HOME/go/bin" "$HOME/scripts" "$HOME/.opencode/bin")
 path+=("$HOME/.tmux/plugins/tmux-session-wizard/bin")
 
 if command -v mise > /dev/null ; then
