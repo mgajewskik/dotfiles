@@ -122,16 +122,12 @@
         }
       }
     },
-    "skillOverrides": {
-      "plantuml-diagrams": "off"
-    },
     "bashEditDiffEnabled": false,
     "autoMemoryEnabled": true,
 {{- if .container }}
     "voice": {
       "enabled": false
     },
-    "voiceEnabled": false,
 {{- end }}
     "skipDangerousModePermissionPrompt": true
   },
@@ -155,7 +151,6 @@
       "enabled": true,
       "mode": "hold"
     },
-    "voiceEnabled": true,
     "agentPushNotifEnabled": true,
     "inputNeededNotifEnabled": true
   }

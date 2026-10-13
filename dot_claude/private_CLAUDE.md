@@ -83,7 +83,7 @@ Default: treat targets as **production / customer-facing / unknown** unless clea
 
 ## Skills
 
-- Skills that another skill names ("the **prove-it-works** principle skill", "run `how`", "run `/architect`") are often user-only: they are not in your skill list, and a skill tool refuses them. Load them by reading their `SKILL.md`: use the path in the naming skill's `skill-paths.md` when it has one; otherwise try `~/.agents/skills/<name>/SKILL.md`, then `~/.agents/skills/principle-<name>/SKILL.md`. Never call a skill tool for them, and report a skill missing only after both paths fail.
+- Skills that another skill names ("the **prove-it-works** principle skill", "run `how`", "run `/architect`") are often user-only: they are not in your skill list, and a skill tool refuses them. Load them by reading their `SKILL.md`: use the path in the naming skill's `skill-paths.md` when it has one; otherwise try `~/.agents/skills/<name>/SKILL.md`, then `~/.agents/skills/work/principles/<name>/SKILL.md`. Never call a skill tool for them, and report a skill missing only after both paths fail.
 - A subagent does not inherit the skills you loaded. When one needs a skill, put the skill's absolute `SKILL.md` path in the brief and tell it to read the file.
 
 ## Subagents
