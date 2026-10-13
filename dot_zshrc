@@ -23,6 +23,7 @@ export EDITOR=nvim
 export VISUAL=nvim
 export LANG="${LANG:-C.UTF-8}"
 export GPG_TTY="$(tty)"
+[[ -z $SSH_AUTH_SOCK && -S $XDG_RUNTIME_DIR/ssh-agent.socket ]] && export SSH_AUTH_SOCK="$XDG_RUNTIME_DIR/ssh-agent.socket"
 export BAT_THEME=ansi
 export SHELL="${commands[zsh]:-$SHELL}"
 

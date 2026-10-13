@@ -15,6 +15,7 @@ bind -m vi-command '"j": history-search-forward'
 export EDITOR=nvim VISUAL=nvim
 export LANG="${LANG:-C.UTF-8}"
 export GPG_TTY="$(tty)"
+[[ -z $SSH_AUTH_SOCK && -S $XDG_RUNTIME_DIR/ssh-agent.socket ]] && export SSH_AUTH_SOCK="$XDG_RUNTIME_DIR/ssh-agent.socket"
 export BAT_THEME=ansi
 PATH="$HOME/.local/bin:$PATH:$HOME/.cargo/bin:$HOME/go/bin"
 
