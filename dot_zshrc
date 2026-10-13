@@ -204,3 +204,7 @@ precmd_functions+=(_sync_histfile)
 if [[ -r "$HOME/.zsh/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh" ]] ; then
   source "$HOME/.zsh/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh"
 fi
+
+if [[ -r "$HOME/.zshrc.local" ]] ; then
+  source "$HOME/.zshrc.local"
+fi
