@@ -15,6 +15,7 @@ Usage:
 
 import os
 import signal
+import socket
 import subprocess
 import sys
 import time
@@ -22,6 +23,8 @@ from pathlib import Path
 
 PROBE_TIMEOUT_S = 2
 STUCK_AFTER_S = 5
+# nvim client calls herdr-nvim makes. Not --remote-ui: that is a live sidebar.
+CLIENT_FLAGS = ("--remote-expr ", "--remote-send ", "--remote ")
 
 
 def runtime_dir() -> Path:
@@ -72,8 +75,21 @@ def kill(pid, sig):
         return False
     except PermissionError as error:
         print(f"cannot signal {pid}: {error}", file=sys.stderr)
-        print("Run this from a normal terminal, not an agent shell.", file=sys.stderr)
         raise
+
+
+def nothing_listening(sock: Path):
+    # Raises PermissionError inside a sandbox, which hides processes and
+    # blocks sockets, so a live daemon there would look stale.
+    s = socket.socket(socket.AF_UNIX)
+    try:
+        s.settimeout(PROBE_TIMEOUT_S)
+        s.connect(str(sock))
+        return False
+    except ConnectionRefusedError:
+        return True
+    finally:
+        s.close()
 
 
 def probe(sock: Path):
@@ -100,7 +116,7 @@ def stuck_pids(rows):
         if etimes < STUCK_AFTER_S:
             continue
         waiting = args.endswith("herdr-nvim toggle") or (
-            "--remote-expr" in args and "/herdr-nvim/" in args
+            any(flag in args for flag in CLIENT_FLAGS) and "/herdr-nvim/" in args
         )
         if waiting:
             found.append(pid)
@@ -135,16 +151,22 @@ def main():
     healthy = []
     wedged = []
     stale = []
+    unknown = []
     for sock in sockets:
         key = sock.stem
         pid = daemon_pid(rows, sock)
         if probe(sock):
             healthy.append((key, pid))
             continue
-        if pid is None:
+        if pid is not None:
+            wedged.append((key, pid, sock, descendants(rows, pid)))
+        elif nothing_listening(sock):
             stale.append((key, sock))
         else:
-            wedged.append((key, pid, sock, descendants(rows, pid)))
+            unknown.append(key)
+
+    for key in unknown:
+        print(f"  skip {key}: socket accepts connections but no process found")
 
     stuck = stuck_pids(rows)
     if not wedged and not stale and not stuck:
@@ -190,5 +212,7 @@ def main():
 if __name__ == "__main__":
     try:
         sys.exit(main())
-    except PermissionError:
+    except PermissionError as error:
+        print(f"{error}", file=sys.stderr)
+        print("Run this from a normal terminal, not an agent shell.", file=sys.stderr)
         sys.exit(1)
