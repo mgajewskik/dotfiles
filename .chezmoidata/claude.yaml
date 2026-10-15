@@ -8,15 +8,7 @@ claude:
       - 'su'
       - 'su *'
       - 'runuser *'
-      # recursive force delete
-      - 'rm -rf*'
-      - 'rm -fr*'
-      - 'rm -Rf*'
-      - 'rm -fR*'
-      - 'rm -r -f*'
-      - 'rm -f -r*'
-      - 'rm --recursive --force*'
-      - 'rm --force --recursive*'
+      # deletes outside the project (`rm -rf` there is stopped by the sandbox write boundary)
       - 'rm *--no-preserve-root*'
       - 'find / *-delete*'
       - 'find ~ *-delete*'

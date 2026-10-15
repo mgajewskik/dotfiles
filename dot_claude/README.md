@@ -46,9 +46,14 @@ Patterns live in `.chezmoidata/claude.yaml` in my dotfiles; `chezmoi apply` turn
 
 | List | Host | Container |
 | --- | --- | --- |
-| `deny`: local damage (sudo, `rm -rf`, disks, `git reset --hard`) | deny | classifier |
+| `deny`: local damage (sudo, disks, `git reset --hard`) | deny | classifier |
 | `remote`: external and irreversible (force push, cloud deletes, publishing) | deny | deny |
 | `ask`: PR merges and global installs | ask | classifier |
+
+`rm -rf` is not on the host `deny` list: it works inside the project, and outside it the sandbox's write boundary fails
+it with `Read-only file system`. The exception is the paths the sandbox can write to anyway (`sandbox.filesystem.allowWrite`
+and `~/.agents/skills`): a delete there runs sandboxed and is auto-allowed, reviewed only in sessions with server-side
+classifier review.
 
 Sandbox `allowWrite` paths that tools add on a machine (terminal-browser) are kept, so a path dropped from the template
 stays on machines that already have it until I delete it there.
