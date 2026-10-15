@@ -3,6 +3,8 @@
 prepend_keymap = [
   { on = "C-\\", run = 'echo', desc = "Disable cwd" },
 
+  { on = "<Esc>", run = "plugin smart-esc", desc = "Cancel find/filter/search/visual/selection, or quit." },
+
   { on = "!", run = 'shell "$SHELL" --block', desc = "Open shell here." },
 
   { on = "l", run = "plugin smart-enter", desc = "Enter the child directory or open the file." },
