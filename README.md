@@ -70,7 +70,7 @@ What I set up, in short:
 
 - **zsh**: vi mode; Up/Down search history by prefix; Tab completes in fzf; `Ctrl-R` history, `Ctrl-T` files,
   `Alt-C` directories; `cd` is zoxide (`cdi` picks with fzf); `y` opens yazi and follows its last directory;
-  `ls`, `cat`, `man`, `rg` are eza, bat, batman and batgrep; `k` is kubectl.
+  `ls` and `man` are eza and batman; `k` is kubectl. The LSP servers nvim's mason installs are on `PATH`.
 - **tmux**: prefix `C-b` or `C-a`; my cheat sheet heads `~/.tmux.conf`. Sessions survive restarts
   (resurrect + continuum); `prefix q`, or `t` from the shell, opens the session wizard.
 - **herdr**: prefix `ctrl+a`; my keys are in `~/.config/herdr/config.toml`. When `prefix e` (nvim sidebar) hangs,

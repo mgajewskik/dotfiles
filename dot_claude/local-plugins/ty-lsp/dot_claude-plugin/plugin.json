@@ -1,0 +1,8 @@
+{
+  "name": "ty-lsp",
+  "version": "0.1.0",
+  "description": "Python language server (ty from PATH)",
+  "author": {
+    "name": "Maciej Gajewski"
+  }
+}

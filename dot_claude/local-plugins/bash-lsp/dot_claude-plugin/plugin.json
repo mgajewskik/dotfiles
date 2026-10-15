@@ -1,0 +1,8 @@
+{
+  "name": "bash-lsp",
+  "version": "0.1.0",
+  "description": "Bash language server (bash-language-server from PATH)",
+  "author": {
+    "name": "Maciej Gajewski"
+  }
+}

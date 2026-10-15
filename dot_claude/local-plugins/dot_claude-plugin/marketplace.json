@@ -9,6 +9,16 @@
       "name": "terraform-lsp",
       "source": "./terraform-lsp",
       "description": "Terraform language server (terraform-ls from PATH)"
+    },
+    {
+      "name": "bash-lsp",
+      "source": "./bash-lsp",
+      "description": "Bash language server (bash-language-server from PATH)"
+    },
+    {
+      "name": "ty-lsp",
+      "source": "./ty-lsp",
+      "description": "Python language server (ty from PATH)"
     }
   ]
 }

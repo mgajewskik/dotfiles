@@ -152,7 +152,10 @@
       "gopls-lsp@claude-plugins-official": true,
       "rust-analyzer-lsp@claude-plugins-official": true,
       "lua-lsp@claude-plugins-official": true,
-      "terraform-lsp@personal": true
+      "typescript-lsp@claude-plugins-official": true,
+      "terraform-lsp@personal": true,
+      "bash-lsp@personal": true,
+      "ty-lsp@personal": true
     },
     "autoCompactWindow": 400000,
     "tui": "fullscreen",

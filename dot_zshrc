@@ -31,6 +31,7 @@ typeset -U path fpath
 
 path=("$HOME/.local/bin" $path "$HOME/.cargo/bin" "$HOME/go/bin" "$HOME/scripts" "$HOME/.opencode/bin")
 path+=("$HOME/.tmux/plugins/tmux-session-wizard/bin")
+path+=("$HOME/.local/share/nvim/mason/bin")
 
 if command -v mise > /dev/null ; then
   eval "$(mise activate zsh)"
