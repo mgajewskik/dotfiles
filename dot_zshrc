@@ -152,10 +152,8 @@ export FZF_DEFAULT_OPTS="
 
 # aliases
 alias ls="eza --git --icons --group-directories-first --time-style=long-iso --group"
-alias cat="bat"
 alias man="batman"
 alias bd="batdiff"
-alias rg="batgrep"
 alias v="nvim"
 alias vi="nvim"
 alias ..="cd .."
@@ -181,6 +179,7 @@ alias run="./run"
 
 # list the directory after every cd
 chpwd() {
+  [[ -t 0 && -t 1 ]] || return 0
   eza --git --icons --group-directories-first --time-style=long-iso --group
 }
 

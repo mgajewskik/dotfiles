@@ -36,7 +36,6 @@ if command -v kubectl >/dev/null; then
 fi
 
 command -v eza >/dev/null && alias ls="eza --git --icons --group-directories-first --time-style=long-iso --group"
-command -v bat >/dev/null && alias cat="bat"
 command -v nvim >/dev/null && alias v="nvim" vi="nvim"
 alias ..="cd .."
 alias c="chezmoi"
