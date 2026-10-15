@@ -5,6 +5,7 @@
 {{- $repo := includeTemplate "claude/settings.json" . | fromJson -}}
 {{- range $key, $value := $repo.owned }}{{ $_ := set $settings $key $value }}{{ end -}}
 {{- range $key, $value := $repo.defaults }}{{ if not (hasKey $settings $key) }}{{ $_ := set $settings $key $value }}{{ end }}{{ end -}}
+{{- range $name, $on := $repo.defaults.enabledPlugins }}{{ if not (hasKey $settings.enabledPlugins $name) }}{{ $_ := set $settings.enabledPlugins $name $on }}{{ end }}{{ end -}}
 {{- if $settings.sandbox.enabled -}}
 {{-   $_ := set $settings.sandbox.filesystem "allowWrite" (concat $settings.sandbox.filesystem.allowWrite $machineWrites | uniq) -}}
 {{- end -}}

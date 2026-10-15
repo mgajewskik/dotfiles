@@ -69,15 +69,13 @@ chezmoi already links `skills` to `~/.agents/skills` (cloned from `mgajewskik/sk
 # MCP servers (user scope, stored in ~/.claude.json)
 claude mcp add -s user --transport http context7 https://mcp.context7.com/mcp
 claude mcp add -s user chrome-devtools -- npx -y chrome-devtools-mcp@1.10.1 --autoConnect
-
-# LSP plugins (binaries must be on PATH)
-claude plugin marketplace add anthropics/claude-plugins-official
-claude plugin install gopls-lsp@claude-plugins-official
-claude plugin install rust-analyzer-lsp@claude-plugins-official
-claude plugin install lua-lsp@claude-plugins-official
-claude plugin marketplace add ~/.claude/local-plugins
-claude plugin install terraform-lsp@personal
 ```
+
+LSP plugins: `chezmoi apply` declares both marketplaces and adds each plugin in the template's `enabledPlugins` that a
+machine's settings don't mention yet. On a new machine Claude Code then clones the marketplaces and downloads the enabled
+plugins by itself. A machine that already has the marketplaces may not fetch a newly added plugin: if `claude plugin list`
+doesn't list it, run `claude plugin install <name>@<marketplace>`. `claude plugin disable` keeps a plugin off on
+that machine. The language servers must be on `PATH`: nvim's mason installs them, and ty comes from mise.
 
 MCP servers run outside the Bash sandbox and the Edit/Write hook (e.g. chrome-devtools can save screenshots anywhere).
 
