@@ -170,8 +170,6 @@ claude:
       - '*dropDatabase*'
     ask:
       # leaves the machine
-      - 'git push'
-      - 'git push *'
       - 'gh pr merge*'
       # installs
       - 'pacman -S*'

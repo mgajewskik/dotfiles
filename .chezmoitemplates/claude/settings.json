@@ -23,8 +23,8 @@
         "~/.agents/skills"
       ],
 {{- if .container }}
-      "defaultMode": "bypassPermissions",
-      "ask": {{ $rules.remote | toJson }}
+      "defaultMode": "auto",
+      "deny": {{ $rules.remote | toJson }}
 {{- else }}
       "defaultMode": "auto",
       "deny": {{ concat (list "Read(~/.ssh/**)" "Read(~/.aws/**)" "Read(~/.gnupg/**)") $rules.deny $rules.remote | toJson }},
@@ -125,6 +125,16 @@
     "bashEditDiffEnabled": false,
     "autoMemoryEnabled": true,
 {{- if .container }}
+    "autoMode": {
+      "environment": [
+        "$defaults",
+        "Host containment (replaces the default Host containment entry): Claude Code runs as a non-root user with sudo in a disposable dev container. Recreating the container rebuilds everything in it from the image and dotfiles. Folders mounted from the host, the project folder among them, live outside the container and are not disposable. Actions taken with credentials in the container reach real remote systems."
+      ],
+      "allow": [
+        "$defaults",
+        "Container Tooling: Package-manager commands that install, upgrade, or download tools, dependencies, and packages by name from the manager's configured default registry, with sudo when the manager needs it. Does not cover URLs, git refs, file paths, registry or index overrides, adding package sources or signing keys, piping install scripts, or any other sudo action."
+      ]
+    },
     "voice": {
       "enabled": false
     },

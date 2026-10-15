@@ -7,9 +7,9 @@ itself (model, theme, plugins).
 ## Host and container
 
 On a host, Claude runs in the sandbox with the guards below. In a container (chezmoi's `.container`) there is no
-sandbox and no prompts (`bypassPermissions`), except the `remote` patterns: Claude asks before anything that
-leaves the machine and cannot be undone. The container is the boundary there, so it can install and change anything
-inside it.
+sandbox: Claude runs in auto mode, the `remote` patterns are denied, and an `autoMode` block tells the classifier the
+container is disposable, so Claude installs tools there without asking. The classifier's default blocks on remote,
+destructive, and exfiltrating actions still apply. I run remote destructive commands myself. `claude auto-mode config` prints the rules in effect.
 
 ## Launch modes (host)
 
@@ -46,9 +46,9 @@ Patterns live in `.chezmoidata/claude.yaml` in my dotfiles; `chezmoi apply` turn
 
 | List | Host | Container |
 | --- | --- | --- |
-| `deny`: local damage (sudo, `rm -rf`, disks, `git reset --hard`) | deny | allowed |
-| `remote`: external and irreversible (force push, cloud deletes, publishing) | deny | ask |
-| `ask`: pushes and global installs | ask | allowed |
+| `deny`: local damage (sudo, `rm -rf`, disks, `git reset --hard`) | deny | classifier |
+| `remote`: external and irreversible (force push, cloud deletes, publishing) | deny | deny |
+| `ask`: PR merges and global installs | ask | classifier |
 
 Sandbox `allowWrite` paths that tools add on a machine (terminal-browser) are kept, so a path dropped from the template
 stays on machines that already have it until I delete it there.
