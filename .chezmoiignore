@@ -1,6 +1,3 @@
-# reference dotfiles kept in the repo, not applied to $HOME
-examples
-examples/**
 .work
 .work/**
 handoff
