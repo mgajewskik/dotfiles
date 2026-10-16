@@ -82,6 +82,9 @@ Default: treat targets as **production / customer-facing / unknown** unless clea
 - The RTK hook adds the `rtk` prefix to every command it supports, so write commands without it. If RTK breaks a valid command: `rtk proxy <command> ...`.
 - File tools for read/edit/write; shell for search, listing, execution, git, package scripts, and process diagnostics.
 - Temp files go under `/tmp`, never in the project tree.
+{{- if and .container (eq .chezmoi.arch "amd64") }}
+- Browser: use agent-browser; learn it from `agent-browser --help` (`skills get` has no skills in this build). A command whose launch options (profile, headed, args) differ from the running browser's closes it and relaunches; `relaunched browser` in the output means that happened. My dev containers set `AGENT_BROWSER_PROFILE` to `<project root>/.browser-profile`, which keeps logins: never pass `--profile` there. Where it is unset, Chrome starts on a new temporary profile each launch, so pass the same absolute `--profile <project root>/.browser-profile` on every command. Confirm the profile path in `chrome://version`, not in a process listing.
+{{- end }}
 - Commit with `git commit -F <file>`: write the message to a temp file with the Write tool first. Never pass it via heredoc or stdin; that hangs in the Bash sandbox.
 - Commit as the git identity configured in the repository (`git config user.name` / `user.email`); never pass `--author` or override it. Never add `Co-Authored-By` or any other AI attribution to commits or PRs.
 

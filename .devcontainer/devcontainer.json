@@ -24,7 +24,9 @@
   ],
   // agent-browser opens Chrome for Testing (installed by my dotfiles) as a window on that desktop
   "containerEnv": {
-    "AGENT_BROWSER_HEADED": "true"
+    "AGENT_BROWSER_HEADED": "true",
+    // every agent-browser command uses this persistent profile, so logins survive Chrome restarts; git-ignored by my dotfiles
+    "AGENT_BROWSER_PROFILE": "${containerWorkspaceFolder}/.browser-profile"
   },
   "mounts": [
     "type=bind,source=${localEnv:XDG_RUNTIME_DIR}/gnupg/S.gpg-agent.extra,target=/run/host-gpg/S.gpg-agent",

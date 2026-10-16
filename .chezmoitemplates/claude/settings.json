@@ -128,6 +128,9 @@
       "environment": [
         "$defaults",
         "Host containment (replaces the default Host containment entry): Claude Code runs as a non-root user with sudo in a disposable dev container. Recreating the container rebuilds everything in it from the image and dotfiles. Folders mounted from the host, the project folder among them, live outside the container and are not disposable. Actions taken with credentials in the container reach real remote systems."
+{{- if eq .chezmoi.arch "amd64" }},
+        "Browser: agent-browser (a CLI on PATH, from mise) is the integration for using a web browser. It drives Chrome for Testing installed in the container, shown as a window on the container's desktop when AGENT_BROWSER_HEADED is set. My dev containers set AGENT_BROWSER_PROFILE to <project root>/.browser-profile (git-ignored), the persistent profile that keeps the project's browser logins. A command with a different --profile, or with none where the variable is unset, relaunches Chrome on another profile and the logins are lost."
+{{- end }}
       ],
       "allow": [
         "$defaults",

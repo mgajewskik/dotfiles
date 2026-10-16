@@ -32,7 +32,9 @@
   ],
   // agent-browser opens Chrome for Testing (installed by my dotfiles) as a window on that desktop
   "containerEnv": {
-    "AGENT_BROWSER_HEADED": "true"
+    "AGENT_BROWSER_HEADED": "true",
+    // every agent-browser command uses this persistent profile, so logins survive Chrome restarts; git-ignored by my dotfiles
+    "AGENT_BROWSER_PROFILE": "${containerWorkspaceFolder}/.browser-profile"
   },
   // from my host's environment when crib starts the container (empty if unset there); `crib restart` picks up a new value.
   // Unlike containerEnv, crib passes these only to its shells and commands, so the token stays out of `podman inspect`.

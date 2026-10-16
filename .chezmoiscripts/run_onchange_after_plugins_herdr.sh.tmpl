@@ -13,7 +13,6 @@ MISE="{{ if $m := lookPath "mise" }}{{ $m }}{{ else }}{{ joinPath .chezmoi.homeD
 
 plugins=(
   poweroutlet2/herdr-confirm-close-pane
-  zenbu-labs/terminal-browser/herdr-plugin
   ChmaraX/herdr-nvim
 {{- if lookPath "cargo" }}
   thanhdat77/herdr-navigator
