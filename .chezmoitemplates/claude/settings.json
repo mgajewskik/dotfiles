@@ -19,17 +19,16 @@
         "WebFetch",
         "WebFetch(domain:*)"
       ],
+{{- if .container }}
+      "deny": {{ $rules.remote | toJson }},
+{{- else }}
+      "deny": {{ concat (list "Read(~/.ssh/**)" "Read(~/.aws/**)" "Read(~/.gnupg/**)") $rules.deny $rules.remote | toJson }},
+      "ask": {{ $rules.ask | toJson }},
+{{- end }}
+      "defaultMode": "auto",
       "additionalDirectories": [
         "~/.agents/skills"
-      ],
-{{- if .container }}
-      "defaultMode": "auto",
-      "deny": {{ $rules.remote | toJson }}
-{{- else }}
-      "defaultMode": "auto",
-      "deny": {{ concat (list "Read(~/.ssh/**)" "Read(~/.aws/**)" "Read(~/.gnupg/**)") $rules.deny $rules.remote | toJson }},
-      "ask": {{ $rules.ask | toJson }}
-{{- end }}
+      ]
     },
     "hooks": {
       "PreToolUse": [

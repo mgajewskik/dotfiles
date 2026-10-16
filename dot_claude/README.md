@@ -2,7 +2,8 @@
 
 chezmoi manages this directory from `dot_claude/` in my dotfiles. Edit the source there, not the files here.
 `settings.json` is built from `.chezmoitemplates/claude/settings.json` on every apply, keeping the keys Claude writes
-itself (model, theme, plugins).
+itself (model, theme, plugins). jq does the merge and keeps the file's key order, so it has to be on `PATH` or in
+mise before the apply; the container installs it in `post-create.sh`.
 
 ## Host and container
 

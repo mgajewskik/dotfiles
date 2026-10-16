@@ -1,0 +1,39 @@
+#!/bin/bash
+# merges .chezmoitemplates/claude/settings.json into this machine's ~/.claude/settings.json: "owned" keys replace
+# the machine's, "defaults" fill in only what is missing, and sandbox allowWrite paths the machine added are kept.
+# jq keeps the key order of the current file; keys it lacks follow in the template's order.
+# jq has to exist before chezmoi applies this, which runs before mise installs its tools: post-create.sh installs it
+# in the container.
+
+set -euo pipefail
+
+MISE="{{ if $m := lookPath "mise" }}{{ $m }}{{ else }}{{ joinPath .chezmoi.homeDir ".local/bin/mise" }}{{ end }}"
+if ! command -v jq >/dev/null; then
+  if [[ ! -x "$MISE" ]]; then
+    echo "modify_settings.json: no jq, ~/.claude/settings.json left as is; run chezmoi apply again once mise installs jq" >&2
+    cat
+    exit 0
+  fi
+  jq() { "$MISE" exec jq -- jq "$@"; }
+fi
+
+current="$(cat)"
+# blank when the file does not exist yet
+[[ -n "${current//[[:space:]]/}" ]] || current="{}"
+repo="$(cat <<'SETTINGS'
+{{ includeTemplate "claude/settings.json" . }}
+SETTINGS
+)"
+
+jq --argjson repo "$repo" '
+  (.sandbox.filesystem.allowWrite // []) as $machineWrites
+  | . + $repo.owned
+  | reduce ($repo.defaults | to_entries[]) as $default (.;
+      if has($default.key) then . else .[$default.key] = $default.value end)
+  | reduce ($repo.defaults.enabledPlugins | to_entries[]) as $plugin (.;
+      if .enabledPlugins | has($plugin.key) then . else .enabledPlugins[$plugin.key] = $plugin.value end)
+  | if .sandbox.enabled then
+      .sandbox.filesystem.allowWrite |= reduce (. + $machineWrites)[] as $path ([];
+        if any(.[]; . == $path) then . else . + [$path] end)
+    else . end
+' <<<"$current"
