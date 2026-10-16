@@ -1,5 +1,5 @@
 #!/bin/bash
-set -euo pipefail
+set -eu
 
 if command -v zsh >/dev/null && sudo -n true 2>/dev/null; then
     sudo chsh -s "$(command -v zsh)" "$(id -un)" || echo "setup.sh: could not make zsh the login shell" >&2
