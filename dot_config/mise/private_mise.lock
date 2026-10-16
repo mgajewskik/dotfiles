@@ -40,24 +40,24 @@ url = "https://github.com/eth-p/bat-extras/releases/download/v2024.08.24/bat-ext
 url_api = "https://api.github.com/repos/eth-p/bat-extras/releases/assets/188090138"
 
 [[tools.claude]]
-version = "2.1.289"
+version = "2.1.294"
 backend = "aqua:anthropics/claude-code"
 specifiers = ["latest"]
 
 [tools.claude."platforms.linux-arm64"]
-checksum = "sha256:f1dd579805a35402555a833dde1ee509ff6744921dd3f706c82831c7b31cd65f"
-url = "https://github.com/anthropics/claude-code/releases/download/v2.1.289/claude-linux-arm64.tar.gz"
-url_api = "https://api.github.com/repos/anthropics/claude-code/releases/assets/608449163"
+checksum = "sha256:a4be2509f5ad94b4a1c490ce0dd0a3fffa2825d1047f69979c0c9d7b4c913aa8"
+url = "https://github.com/anthropics/claude-code/releases/download/v2.1.294/claude-linux-arm64.tar.gz"
+url_api = "https://api.github.com/repos/anthropics/claude-code/releases/assets/620618629"
 
 [tools.claude."platforms.linux-x64"]
-checksum = "sha256:aa184fe26777b16e18230da937ffe369e40f261bc65405520cafd7bd95783bef"
-url = "https://github.com/anthropics/claude-code/releases/download/v2.1.289/claude-linux-x64.tar.gz"
-url_api = "https://api.github.com/repos/anthropics/claude-code/releases/assets/608449312"
+checksum = "sha256:c152a9520cbe30adfaa7dbff26016d74c668c7dfb093fca2a06fa72cb6e98369"
+url = "https://github.com/anthropics/claude-code/releases/download/v2.1.294/claude-linux-x64.tar.gz"
+url_api = "https://api.github.com/repos/anthropics/claude-code/releases/assets/620618749"
 
 [tools.claude."platforms.macos-arm64"]
-checksum = "sha256:20acfc89a32ed7260b63fd2f3fd71a33de7b2d74b82c724d25941ad73d2e0e96"
-url = "https://github.com/anthropics/claude-code/releases/download/v2.1.289/claude-darwin-arm64.tar.gz"
-url_api = "https://api.github.com/repos/anthropics/claude-code/releases/assets/608449164"
+checksum = "sha256:2adac5f74f236d434d42e1e24a7d68591269f229c987aff19d9ef7e61eee405b"
+url = "https://github.com/anthropics/claude-code/releases/download/v2.1.294/claude-darwin-arm64.tar.gz"
+url_api = "https://api.github.com/repos/anthropics/claude-code/releases/assets/620618630"
 
 [[tools.difftastic]]
 version = "0.71.0"
@@ -182,26 +182,6 @@ checksum = "sha256:20c7a33426ed7a43c3e13a48f2d1866ecc979a8ad46733f86ddc78ab7f12d
 url = "https://github.com/dalance/procs/releases/download/v0.14.12/procs-v0.14.12-aarch64-mac.zip"
 url_api = "https://api.github.com/repos/dalance/procs/releases/assets/457525352"
 
-[[tools."github:devsy-org/devsy"]]
-version = "1.19.0"
-backend = "github:devsy-org/devsy"
-specifiers = ["latest"]
-
-[tools."github:devsy-org/devsy"."platforms.linux-arm64"]
-checksum = "sha256:72e366261e5d81e3afc42efd08a81f5eee93d38104f9461cc9c533828224785f"
-url = "https://github.com/devsy-org/devsy/releases/download/v1.19.0/devsy-linux-arm64"
-url_api = "https://api.github.com/repos/devsy-org/devsy/releases/assets/573006271"
-
-[tools."github:devsy-org/devsy"."platforms.linux-x64"]
-checksum = "sha256:2f43f28ab5b399b379091aeb09628ec6b70dc82212a64d30de8e2a4a18a49ef5"
-url = "https://github.com/devsy-org/devsy/releases/download/v1.19.0/devsy-linux-amd64"
-url_api = "https://api.github.com/repos/devsy-org/devsy/releases/assets/573006267"
-
-[tools."github:devsy-org/devsy"."platforms.macos-arm64"]
-checksum = "sha256:2ab404dfddf14bd2511470b580d5cfa2cb25310853f702c6bd9037d5ef2ea094"
-url = "https://github.com/devsy-org/devsy/releases/download/v1.19.0/Devsy_mac_arm64.zip"
-url_api = "https://api.github.com/repos/devsy-org/devsy/releases/assets/573010844"
-
 [[tools."github:fgrehm/crib"]]
 version = "0.10.0"
 backend = "github:fgrehm/crib"
@@ -268,22 +248,42 @@ url = "https://github.com/twpayne/chezmoi/releases/download/v2.73.0/chezmoi_2.73
 url_api = "https://api.github.com/repos/twpayne/chezmoi/releases/assets/596270971"
 provenance = "github-attestations"
 
+[[tools."github:vercel-labs/agent-browser"]]
+version = "0.38.2"
+backend = "github:vercel-labs/agent-browser"
+specifiers = ["latest"]
+
+[tools."github:vercel-labs/agent-browser"."platforms.linux-arm64"]
+checksum = "sha256:690c02d952de8497bba4f8cc58b59acbf27dc27b346755869b518f4b411c7f40"
+url = "https://github.com/vercel-labs/agent-browser/releases/download/v0.38.2/agent-browser-linux-arm64"
+url_api = "https://api.github.com/repos/vercel-labs/agent-browser/releases/assets/604194739"
+
+[tools."github:vercel-labs/agent-browser"."platforms.linux-x64"]
+checksum = "sha256:a54b765192db774666f0513fa8b545a298753b6f29e73bcdf4a1e78f18e7c0e1"
+url = "https://github.com/vercel-labs/agent-browser/releases/download/v0.38.2/agent-browser-linux-x64"
+url_api = "https://api.github.com/repos/vercel-labs/agent-browser/releases/assets/604194795"
+
+[tools."github:vercel-labs/agent-browser"."platforms.macos-arm64"]
+checksum = "sha256:8168b86ab5d94be8f670992dfe4fe1445016518a864b48bda105e64142e7cbf9"
+url = "https://github.com/vercel-labs/agent-browser/releases/download/v0.38.2/agent-browser-darwin-arm64"
+url_api = "https://api.github.com/repos/vercel-labs/agent-browser/releases/assets/604194741"
+
 [[tools.go]]
-version = "1.27.1"
+version = "1.27.2"
 backend = "core:go"
 specifiers = ["latest"]
 
 [tools.go."platforms.linux-arm64"]
-checksum = "sha256:3450b45a3f9ee8568792736a5c5e70a1f2e9b36c35a8f74958c03e51d7d92bec"
-url = "https://dl.google.com/go/go1.27.1.linux-arm64.tar.gz"
+checksum = "sha256:94f3e30b8e374bc285e7dadc11e0865726b9bc6e85b841ccceaabc0214c6b7c8"
+url = "https://dl.google.com/go/go1.27.2.linux-arm64.tar.gz"
 
 [tools.go."platforms.linux-x64"]
-checksum = "sha256:63d339f0da5ab53635a56f2490a7984dfe12dfcff22ad749f63edaf590168445"
-url = "https://dl.google.com/go/go1.27.1.linux-amd64.tar.gz"
+checksum = "sha256:ecbadb99091a3f46e31f5f934b068b1864eafa7995211b39eaddf76996045fe5"
+url = "https://dl.google.com/go/go1.27.2.linux-amd64.tar.gz"
 
 [tools.go."platforms.macos-arm64"]
-checksum = "sha256:ee215d57e0ec269c60cc9ceca68e6bda321ba9ee5afe24f4b0988703c2d87d12"
-url = "https://dl.google.com/go/go1.27.1.darwin-arm64.tar.gz"
+checksum = "sha256:76812b213b1b2302c978d28fa52fa92d541704b9e7d9d5db8002c50e4018c4c5"
+url = "https://dl.google.com/go/go1.27.2.darwin-arm64.tar.gz"
 
 [[tools.herdr]]
 version = "0.9.3"
@@ -439,6 +439,23 @@ url = "https://github.com/neovim/neovim/releases/download/v0.12.5/nvim-linux-x86
 [tools.neovim."platforms.macos-arm64"]
 url = "https://github.com/neovim/neovim/releases/download/v0.12.5/nvim-macos-arm64.tar.gz"
 
+[[tools.node]]
+version = "26.11.1"
+backend = "core:node"
+specifiers = ["latest"]
+
+[tools.node."platforms.linux-arm64"]
+checksum = "sha256:170454fb022f5e9b5f6cc76c25fa32ef5100895be44eb04e92f9780591491bbf"
+url = "https://nodejs.org/dist/v26.11.1/node-v26.11.1-linux-arm64.tar.gz"
+
+[tools.node."platforms.linux-x64"]
+checksum = "sha256:15fc043a51a5783f2f4b634561091658f5a7f0e3db03f997dca3a8033a33e45b"
+url = "https://nodejs.org/dist/v26.11.1/node-v26.11.1-linux-x64.tar.gz"
+
+[tools.node."platforms.macos-arm64"]
+checksum = "sha256:d916511b55965e91be7a88e17f88d895b6793ceaba3e6c9b194aefe51c2c65ac"
+url = "https://nodejs.org/dist/v26.11.1/node-v26.11.1-darwin-arm64.tar.gz"
+
 [[tools.ripgrep]]
 version = "15.2.0"
 backend = "aqua:BurntSushi/ripgrep"
@@ -520,6 +537,29 @@ provenance = "github-attestations"
 checksum = "sha256:70f7573b2b2e5371a5b58cc5227d2ad981fd5374596b9874e770af486060774e"
 url = "https://github.com/tree-sitter/tree-sitter/releases/download/v0.27.0/tree-sitter-macos-arm64.gz"
 url_api = "https://api.github.com/repos/tree-sitter/tree-sitter/releases/assets/536857317"
+provenance = "github-attestations"
+
+[[tools.ty]]
+version = "0.0.85"
+backend = "aqua:astral-sh/ty"
+specifiers = ["latest"]
+
+[tools.ty."platforms.linux-arm64"]
+checksum = "sha256:27f29a87cd89de12c09b953d320a449983be630ce3d31691848604a86915d5ab"
+url = "https://github.com/astral-sh/ty/releases/download/0.0.85/ty-aarch64-unknown-linux-gnu.tar.gz"
+url_api = "https://api.github.com/repos/astral-sh/ty/releases/assets/616784631"
+provenance = "github-attestations"
+
+[tools.ty."platforms.linux-x64"]
+checksum = "sha256:0c3564f13296c42f96e576a06276f7f0b67cbdf030888ff99c697259946162f0"
+url = "https://github.com/astral-sh/ty/releases/download/0.0.85/ty-x86_64-unknown-linux-gnu.tar.gz"
+url_api = "https://api.github.com/repos/astral-sh/ty/releases/assets/616784806"
+provenance = "github-attestations"
+
+[tools.ty."platforms.macos-arm64"]
+checksum = "sha256:81c1c7c450cf01ce5dff83f8e62f3f2d0fd1e67462dc77c2bed84fddb31b3c8c"
+url = "https://github.com/astral-sh/ty/releases/download/0.0.85/ty-aarch64-apple-darwin.tar.gz"
+url_api = "https://api.github.com/repos/astral-sh/ty/releases/assets/616784588"
 provenance = "github-attestations"
 
 [[tools.usage]]
