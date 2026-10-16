@@ -1,0 +1,22 @@
+{{- if and .container (eq .chezmoi.arch "amd64") -}}
+#!/bin/bash
+# containers only: Chrome for Testing for agent-browser, plus the libraries and fonts it needs (apt, dnf or yum);
+# amd64 only: Chrome for Testing has no Linux arm64 build
+# named install_packages_* to sort after install_packages, which installs agent-browser
+# runs once; for a newer Chrome: agent-browser install
+
+set -u
+
+MISE="{{ if $m := lookPath "mise" }}{{ $m }}{{ else }}{{ joinPath .chezmoi.homeDir ".local/bin/mise" }}{{ end }}"
+
+# the dependencies need sudo; without passwordless sudo this would stop the apply at a password prompt
+if ! sudo -n true 2>/dev/null; then
+  echo "agent-browser: no passwordless sudo, skipped the Chrome install; run: agent-browser install --with-deps" >&2
+  exit 0
+fi
+
+# exec --, not exec agent-browser: the registry's agent-browser is another backend than my github: one
+# a failed install leaves the rest of the apply running
+"$MISE" exec -- agent-browser install --with-deps \
+  || echo "agent-browser: Chrome install failed; retry with: agent-browser install --with-deps" >&2
+{{ end -}}
