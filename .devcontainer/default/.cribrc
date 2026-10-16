@@ -1,0 +1,8 @@
+# Goes in the project root. In someone else's project: echo .cribrc >> .git/info/exclude
+# my dotfiles even on a machine without my ~/.config/crib/config.toml; crib runs their setup.sh after postCreateCommand
+dotfiles.repository = https://github.com/mgajewskik/dotfiles
+
+# untrusted code: no access to my SSH agent
+# plugins.disable = ssh
+# keep package caches in volumes across rebuilds
+# cache = npm, pip, go
