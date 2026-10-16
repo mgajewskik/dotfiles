@@ -1,7 +1,0 @@
-{
-	"name": "arch",
-	"build": {
-		"dockerfile": "Dockerfile"
-	},
-	"remoteUser": "dev"
-}
