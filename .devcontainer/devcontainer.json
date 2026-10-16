@@ -1,11 +1,35 @@
 {
-	"name": "dotfiles-test",
-	"image": "mcr.microsoft.com/devcontainers/base:debian-13",
-	"remoteUser": "vscode",
-	"mounts": [
-		"type=bind,source=${localEnv:XDG_RUNTIME_DIR}/gnupg/S.gpg-agent.extra,target=/run/host-gpg/S.gpg-agent"
-	],
-	"onCreateCommand": "sudo apt-get update -qq && sudo apt-get install -y -qq file gnupg",
-	"postCreateCommand": "./setup.sh && .devcontainer/setup-gpg.sh",
-	"waitFor": "postCreateCommand"
+  "name": "dotfiles-test",
+  "image": "mcr.microsoft.com/devcontainers/base:ubuntu",
+  "remoteUser": "vscode",
+  "features": {
+    // the base image installs zsh but keeps bash as the login shell
+    // username is explicit: crib leaves _REMOTE_USER empty, so "automatic" resolves to "" and the install fails
+    "ghcr.io/devcontainers/features/common-utils:2.7.1": {
+      "username": "vscode",
+      "configureZshAsDefaultShell": true,
+      "installOhMyZsh": false,
+      "upgradePackages": true
+    },
+    // a desktop on DISPLAY=:1, served by noVNC at http://localhost:6080 (password: vscode)
+    "ghcr.io/devcontainers/features/desktop-lite:1.2.10": {}
+  },
+  "forwardPorts": [
+    "127.0.0.1:6080:6080"
+  ],
+  "runArgs": [
+    "--shm-size=1g",
+    // tcpdump needs raw sockets; it only sees this container's network
+    "--cap-add=NET_RAW"
+  ],
+  // agent-browser opens Chrome for Testing (installed by my dotfiles) as a window on that desktop
+  "containerEnv": {
+    "AGENT_BROWSER_HEADED": "true"
+  },
+  "mounts": [
+    "type=bind,source=${localEnv:XDG_RUNTIME_DIR}/gnupg/S.gpg-agent.extra,target=/run/host-gpg/S.gpg-agent",
+    "type=bind,source=${localEnv:HOME}/.claude/projects/-workspaces-chezmoi-mount,target=/home/vscode/.claude/projects/-workspaces-chezmoi"
+  ],
+  "postCreateCommand": ".devcontainer/post-create.sh",
+  "waitFor": "postCreateCommand"
 }
