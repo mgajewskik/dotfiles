@@ -1,0 +1,43 @@
+#!/bin/bash
+# registers my Claude Code plugin marketplaces, installs the plugins the settings template enables, and sets my
+# user MCP servers; re-runs when any of them changes. Every command here is safe to repeat.
+# Declaring the marketplaces in settings.json does not fetch them: until `marketplace add` runs, installs fail with
+# "not found in marketplace".
+# named plugins_* to sort after install_packages, which installs claude
+
+set -uo pipefail
+
+MISE="{{ if $m := lookPath "mise" }}{{ $m }}{{ else }}{{ joinPath .chezmoi.homeDir ".local/bin/mise" }}{{ end }}"
+claude() { "$MISE" exec claude -- claude "$@"; }
+
+failed=()
+{{- $settings := includeTemplate "claude/settings.json" . | fromJson }}
+{{- range $name, $marketplace := $settings.owned.extraKnownMarketplaces }}
+claude plugin marketplace add {{ if eq $marketplace.source.source "github" }}{{ $marketplace.source.repo | quote }}{{ else }}{{ $marketplace.source.path | quote }}{{ end }} || failed+=("marketplace {{ $name }}")
+{{- end }}
+# the clones may predate a plugin added upstream
+claude plugin marketplace update || failed+=("marketplace update")
+
+plugins=(
+{{- range $plugin, $enabled := $settings.defaults.enabledPlugins }}{{ if $enabled }}
+  {{ $plugin | quote }}
+{{- end }}{{ end }}
+)
+# install only missing plugins: installing again turns back on a plugin I disabled on this machine
+if installed="$(claude plugin list --json | "$MISE" exec jq -- jq -r '.[].id')"; then
+  for plugin in "${plugins[@]}"; do
+    grep -qxF -- "$plugin" <<<"$installed" && continue
+    claude plugin install -s user "$plugin" || failed+=("$plugin")
+  done
+else
+  failed+=("plugin list")
+fi
+
+# user MCP servers, stored in ~/.claude.json; removing first lets a changed definition replace the old one
+claude mcp remove -s user context7 >/dev/null 2>&1
+claude mcp add -s user --transport http context7 https://mcp.context7.com/mcp || failed+=("mcp context7")
+
+if ((${#failed[@]})); then
+  echo "Claude setup failed for: ${failed[*]}" >&2
+  echo "retry with: chezmoi state delete --bucket=entryState --key={{ joinPath .chezmoi.homeDir ".chezmoiscripts/plugins_claude.sh" }} && chezmoi apply" >&2
+fi

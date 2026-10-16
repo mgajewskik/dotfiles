@@ -62,22 +62,20 @@ stays on machines that already have it until I delete it there.
 Non-Bash rules such as `Read(~/.ssh/**)` sit in the settings template; a `Read` deny also blocks sandboxed Bash from
 reading the path.
 
-## One-time setup (run in a normal terminal; ~/.claude.json and plugins/ are outside the sandbox)
+## Plugins and MCP servers
 
-chezmoi already links `skills` to `~/.agents/skills` (cloned from `mgajewskik/skills`).
+chezmoi links `skills` to `~/.agents/skills` (cloned from `mgajewskik/skills`).
 
-```sh
-# MCP servers (user scope, stored in ~/.claude.json)
-claude mcp add -s user --transport http context7 https://mcp.context7.com/mcp
-claude mcp add -s user chrome-devtools -- npx -y chrome-devtools-mcp@1.10.1 --autoConnect
-```
+`.chezmoiscripts/run_onchange_after_plugins_claude.sh.tmpl` runs on every machine, host and container, when its
+lists change. It does three things:
 
-LSP plugins: `chezmoi apply` declares both marketplaces and adds each plugin in the template's `enabledPlugins` that a
-machine's settings don't mention yet. On a new machine Claude Code then clones the marketplaces and downloads the enabled
-plugins by itself. A machine that already has the marketplaces may not fetch a newly added plugin: if `claude plugin list`
-doesn't list it, run `claude plugin install <name>@<marketplace>`. `claude plugin disable` keeps a plugin off on
-that machine. The language servers must be on `PATH`: nvim's mason installs them, and ty comes from mise.
+- registers both marketplaces with `claude plugin marketplace add`. Declaring them in `settings.json` does not fetch
+  them, and installs fail with "not found in marketplace" until they are fetched;
+- installs each plugin the template's `enabledPlugins` turns on;
+- sets the user MCP servers in `~/.claude.json` (context7). For a browser, Claude uses agent-browser from mise.
 
-MCP servers run outside the Bash sandbox and the Edit/Write hook (e.g. chrome-devtools can save screenshots anywhere).
+To add a plugin, I add it to the template's `enabledPlugins`. To add or change an MCP server, I edit that script.
+`claude plugin disable` keeps a plugin off on one machine. The language servers must be on `PATH`: nvim's mason
+installs them, the npm-based ones (bash, typescript) with node from mise, and ty comes from mise.
 
-chrome-devtools `--autoConnect` attaches to your running Chrome: enable it once at `chrome://inspect/#remote-debugging`.
+MCP servers run outside the Bash sandbox and the Edit/Write hook.
