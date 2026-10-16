@@ -5,7 +5,7 @@ set -euo pipefail
 
 if ! command -v gpg >/dev/null; then
     echo "gpg not found: skipped importing my public key; after installing gnupg, re-run with:" >&2
-    echo "  chezmoi state delete-bucket --bucket=scriptState && chezmoi apply" >&2
+    echo "  chezmoi state delete --bucket=entryState --key={{ joinPath .chezmoi.homeDir ".chezmoiscripts/gpg_public_key.sh" }} && chezmoi apply" >&2
     exit 0
 fi
 
