@@ -15,7 +15,10 @@
     "ghcr.io/devcontainers/features/desktop-lite:1.2.10": {}
   },
   "forwardPorts": [
-    "127.0.0.1:6080:6080"
+    "127.0.0.1:6080:6080",
+    // TigerVNC for a native viewer, which syncs the clipboard: vncviewer 127.0.0.1:5901 (password: vscode)
+    // vnc-relay: points at socat on 5902; without the relay, forward "127.0.0.1:5901:5901"
+    "127.0.0.1:5901:5902"
   ],
   "runArgs": [
     "--shm-size=1g",
@@ -33,5 +36,8 @@
     "type=bind,source=${localEnv:HOME}/.claude/projects/-workspaces-chezmoi-mount,target=/home/vscode/.claude/projects/-workspaces-chezmoi"
   ],
   "postCreateCommand": ".devcontainer/post-create.sh",
+  // vnc-relay: TigerVNC listens on the container's loopback only; socat relays the forwarded 5902 to it.
+  // Optional: if vncviewer connects with "127.0.0.1:5901:5901" forwarded, delete every vnc-relay line and socat.
+  "postStartCommand": "setsid -f socat TCP-LISTEN:5902,fork,reuseaddr TCP:127.0.0.1:5901 >/dev/null 2>&1",
   "waitFor": "postCreateCommand"
 }

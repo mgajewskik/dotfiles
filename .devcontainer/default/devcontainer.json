@@ -21,7 +21,10 @@
   },
   "forwardPorts": [
     // "127.0.0.1:8080:8080",
-    "127.0.0.1:6080:6080"
+    "127.0.0.1:6080:6080",
+    // TigerVNC for a native viewer, which syncs the clipboard: vncviewer 127.0.0.1:5901 (password: vscode)
+    // vnc-relay: points at socat on 5902; without the relay, forward "127.0.0.1:5901:5901"
+    "127.0.0.1:5901:5902"
   ],
   "runArgs": [
     // "--memory=8g",
@@ -52,11 +55,16 @@
   // "initializeCommand": "mkdir -p ${localEnv:HOME}/data",
   // runs before crib installs my dotfiles
   // file: yazi previews; build-essential: nvim-treesitter compiles its parsers with cc;
-  // jq: dot_claude/modify_settings.json.tmpl runs before mise installs its jq;
+  // jq: dot_claude/modify_settings.json.tmpl runs before mise installs its jq; socat: vnc-relay;
   // the rest: network debugging (dig, ping, nc, traceroute, tcpdump, mtr, nmap, iperf3, whois)
   // noninteractive: iperf3 would otherwise ask whether to start its daemon
-  "postCreateCommand": "sudo apt-get update -qq && sudo DEBIAN_FRONTEND=noninteractive apt-get install -y -qq --no-install-recommends file build-essential jq bind9-dnsutils iputils-ping netcat-openbsd traceroute tcpdump mtr-tiny nmap iperf3 whois",
-  // runs on every start, after my dotfiles
-  // "postStartCommand": "make dev-services",
+  "postCreateCommand": "sudo apt-get update -qq && sudo DEBIAN_FRONTEND=noninteractive apt-get install -y -qq --no-install-recommends file build-essential jq socat bind9-dnsutils iputils-ping netcat-openbsd traceroute tcpdump mtr-tiny nmap iperf3 whois",
+  // runs on every start, after my dotfiles; named commands run in parallel
+  "postStartCommand": {
+    // "services": "make dev-services",
+    // vnc-relay: TigerVNC listens on the container's loopback only; socat relays the forwarded 5902 to it.
+    // Optional: if vncviewer connects with "127.0.0.1:5901:5901" forwarded, delete every vnc-relay line and socat.
+    "vnc-relay": "setsid -f socat TCP-LISTEN:5902,fork,reuseaddr TCP:127.0.0.1:5901 >/dev/null 2>&1"
+  },
   "waitFor": "postCreateCommand"
 }
