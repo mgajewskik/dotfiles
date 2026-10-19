@@ -80,6 +80,19 @@ if command -v crib > /dev/null ; then
     mkdir -p "$HOME/.claude/projects/$key"
     print -r -- "\"type=bind,source=\${localEnv:HOME}/.claude/projects/$key,target=/home/vscode/.claude/projects/$key\""
   }
+
+  # run in the project root: saves the running container over crib's snapshot, which `crib down && crib up` and a
+  # restart after a config change recreate it from; `crib rebuild` deletes the snapshot
+  snapshot() {
+    local ws=$(jq -r --arg src "$PWD" 'select(.source == $src) | .id' ~/.crib/workspaces/*/workspace.json(N) 2>/dev/null)
+    [[ -z $ws ]] && { print -u2 "snapshot: no crib workspace for $PWD; run it in the project root"; return 1; }
+    local image=$(jq -r '.snapshotImage // empty' ~/.crib/workspaces/$ws/result.json)
+    # crib uses only a snapshot it recorded itself, after the container's first create
+    [[ -z $image ]] && { print -u2 "snapshot: crib has no snapshot for $ws to replace"; return 1; }
+    local container=$(podman ps -q --filter "label=crib.workspace=$ws")
+    [[ -z $container ]] && { print -u2 "snapshot: no running container for $ws; run crib up"; return 1; }
+    podman commit --change "LABEL crib.workspace=$ws" "$container" "$image"
+  }
 fi
 
 if command -v kubectl > /dev/null ; then
