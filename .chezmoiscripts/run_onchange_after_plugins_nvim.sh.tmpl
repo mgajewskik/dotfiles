@@ -1,0 +1,14 @@
+#!/bin/bash
+# installs the neovim plugins pinned in ~/.config/nvim/lazy-lock.json, so a dev container has them before crib
+# snapshots it, not only after the first nvim start; headless, my nvim config also waits for its treesitter parsers
+# and mason packages
+# re-runs when the lockfile changes; empty on the first apply, before the nvim external is cloned
+# lazy-lock.json hash: {{ $lock := joinPath .chezmoi.homeDir ".config/nvim/lazy-lock.json" }}{{ if stat $lock }}{{ include $lock | sha256sum }}{{ end }}
+# named plugins_* to sort after install_packages, which installs neovim
+
+set -uo pipefail
+
+MISE="{{ if $m := lookPath "mise" }}{{ $m }}{{ else }}{{ joinPath .chezmoi.homeDir ".local/bin/mise" }}{{ end }}"
+
+"$MISE" exec neovim -- nvim --headless "+Lazy! restore" +qa \
+  || echo "nvim plugins: install failed; retry with: nvim --headless '+Lazy! restore' +qa" >&2
