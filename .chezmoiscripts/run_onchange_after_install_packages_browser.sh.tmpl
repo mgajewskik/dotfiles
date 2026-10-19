@@ -1,7 +1,8 @@
-{{- if and .container (eq .chezmoi.arch "amd64") -}}
+{{- if and .container (eq .chezmoi.arch "amd64") (not (env "DOTFILES_NO_BROWSER")) -}}
 #!/bin/bash
 # containers only: Chrome for Testing for agent-browser, plus the libraries and fonts it needs (apt, dnf or yum);
 # amd64 only: Chrome for Testing has no Linux arm64 build
+# skipped when DOTFILES_NO_BROWSER is set (my mini devcontainer)
 # named install_packages_* to sort after install_packages, which installs agent-browser
 # runs once; for a newer Chrome: agent-browser install
 

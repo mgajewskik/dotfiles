@@ -1,6 +1,12 @@
+// Reference for my dev containers: every option I use, explained. This one tests this repo.
+// default/ (desktop and browser) and mini/ (neither) are the same setup without comments, ready to use:
+// copy one's devcontainer.json to <project>/.devcontainer/ and default/.cribrc to <project>/
+// Before the first `crib up`, run `claude-path` in the project root: it creates the host folder the Claude mount needs.
 {
   "name": "dotfiles-test",
-  "image": "mcr.microsoft.com/devcontainers/base:ubuntu",
+  "image": "mcr.microsoft.com/devcontainers/base:debian",
+  // or build from a Dockerfile next to this file, in place of "image"
+  // "build": { "dockerfile": "Dockerfile", "args": { "VERSION": "1.0" } },
   "remoteUser": "vscode",
   "features": {
     // the base image installs zsh but keeps bash as the login shell
@@ -11,31 +17,56 @@
       "installOhMyZsh": false,
       "upgradePackages": true
     },
+    // a docker daemon inside the container
+    // "ghcr.io/devcontainers/features/docker-in-docker:2": {},
     // a desktop on DISPLAY=:1, served by noVNC at http://localhost:6080 (password: vscode)
     "ghcr.io/devcontainers/features/desktop-lite:1.2.10": {}
   },
   "forwardPorts": [
+    // "127.0.0.1:8080:8080",
     "127.0.0.1:6080:6080",
     // TigerVNC for a native viewer, which syncs the clipboard: vncviewer 127.0.0.1:5901 (password: vscode)
     // vnc-relay: points at socat on 5902; without the relay, forward "127.0.0.1:5901:5901"
     "127.0.0.1:5901:5902"
   ],
   "runArgs": [
+    // "--memory=8g",
+    // "--cpus=4",
     "--shm-size=1g",
     // tcpdump needs raw sockets; it only sees this container's network
-    "--cap-add=NET_RAW"
+    "--cap-add=NET_RAW",
+    // ping as vscode (gid 1000): Debian 13's ping has no capability and podman allows ICMP sockets to no group;
+    // only vscode's gid works: rootless podman maps 65537 gids, and the range is checked in host gids
+    "--sysctl=net.ipv4.ping_group_range=1000 1000"
   ],
   // agent-browser opens Chrome for Testing (installed by my dotfiles) as a window on that desktop
   "containerEnv": {
     "AGENT_BROWSER_HEADED": "true",
     // every agent-browser command uses this persistent profile, so logins survive Chrome restarts; git-ignored by my dotfiles
     "AGENT_BROWSER_PROFILE": "${containerWorkspaceFolder}/.browser-profile"
+    // without a desktop (mini/): my dotfiles skip the Chrome for Testing install (and its system libraries) when this is set
+    // "DOTFILES_NO_BROWSER": "1"
   },
+  // from my host's environment when crib starts the container (empty if unset there); `crib restart` picks up a new value.
+  // Unlike containerEnv, crib passes these only to its shells and commands, so the token stays out of `podman inspect`.
+  // "remoteEnv": {
+  //   "EXAMPLE_API_TOKEN": "${localEnv:EXAMPLE_API_TOKEN}"
+  // },
+  // Claude keys its memory by path with non-alphanumerics as "-": a project folder named with anything else
+  // (my_app, app.v2) needs the key from `claude-path` in place of -workspaces-${localWorkspaceFolderBasename}
   "mounts": [
+    // a host folder, read-only
+    // "type=bind,source=${localEnv:HOME}/data,target=/data,readonly",
     "type=bind,source=${localEnv:XDG_RUNTIME_DIR}/gnupg/S.gpg-agent.extra,target=/run/host-gpg/S.gpg-agent",
     "type=bind,source=${localEnv:HOME}/.claude/projects/-workspaces-chezmoi-mount,target=/home/vscode/.claude/projects/-workspaces-chezmoi"
   ],
+  // runs on my host before the container is created
+  // "initializeCommand": "mkdir -p ${localEnv:HOME}/data",
+  // runs before crib installs my dotfiles; default/ and mini/ inline the same apt install (mini without socat),
+  // and post-create.sh explains each package
   "postCreateCommand": ".devcontainer/post-create.sh",
+  // runs on every start, after my dotfiles; an object of named commands runs them in parallel:
+  // { "services": "make dev-services", "vnc-relay": "..." }
   // vnc-relay: TigerVNC listens on the container's loopback only; socat relays the forwarded 5902 to it.
   // Optional: if vncviewer connects with "127.0.0.1:5901:5901" forwarded, delete every vnc-relay line and socat.
   "postStartCommand": "setsid -f socat TCP-LISTEN:5902,fork,reuseaddr TCP:127.0.0.1:5901 >/dev/null 2>&1",

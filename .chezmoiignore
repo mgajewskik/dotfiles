@@ -2,6 +2,8 @@
 .work/**
 handoff
 handoff/**
+.browser-profile
+.browser-profile/**
 setup.sh
 README.md
 

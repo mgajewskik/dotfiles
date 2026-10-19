@@ -1,0 +1,25 @@
+{
+  "image": "mcr.microsoft.com/devcontainers/base:debian",
+  "remoteUser": "vscode",
+  "features": {
+    "ghcr.io/devcontainers/features/common-utils:2.7.1": {
+      "username": "vscode",
+      "configureZshAsDefaultShell": true,
+      "installOhMyZsh": false,
+      "upgradePackages": true
+    }
+  },
+  "runArgs": [
+    "--cap-add=NET_RAW",
+    "--sysctl=net.ipv4.ping_group_range=1000 1000"
+  ],
+  "containerEnv": {
+    "DOTFILES_NO_BROWSER": "1"
+  },
+  "mounts": [
+    "type=bind,source=${localEnv:HOME}/.claude/projects/-workspaces-${localWorkspaceFolderBasename},target=/home/vscode/.claude/projects/-workspaces-${localWorkspaceFolderBasename}"
+  ],
+  "initializeCommand": "mkdir -p ${localEnv:HOME}/.claude/projects/-workspaces-${localWorkspaceFolderBasename}",
+  "postCreateCommand": "sudo apt-get update -qq && sudo DEBIAN_FRONTEND=noninteractive apt-get install -y -qq --no-install-recommends file build-essential jq bind9-dnsutils iputils-ping netcat-openbsd traceroute tcpdump mtr-tiny nmap iperf3 whois",
+  "waitFor": "postCreateCommand"
+}
