@@ -134,7 +134,12 @@
       ],
       "allow": [
         "$defaults",
-        "Container Tooling: Package-manager commands that install, upgrade, or download tools, dependencies, and packages by name from the manager's configured default registry, with sudo when the manager needs it. Does not cover URLs, git refs, file paths, registry or index overrides, adding package sources or signing keys, piping install scripts, or any other sudo action."
+        "Container Tooling: Package-manager commands that install, upgrade, or download tools, dependencies, and packages by name from the manager's configured default registry, with sudo when the manager needs it. Does not cover URLs, git refs, file paths, registry or index overrides, adding package sources or signing keys, or piping install scripts.",
+        "Container Filesystem: Reading, writing, editing, moving, and deleting files and directories anywhere on the container's own filesystem and under /workspaces, pre-existing ones included, with sudo where the path needs it; and sudo for managing the container's users, groups, file ownership and modes. Does not cover git commands that discard uncommitted work under /workspaces (reset --hard, clean, checkout or restore of a whole tree, stash drop or clear), the other folders mounted from the host (anything under ~/.claude, /run/host-gpg, and any other bind mount outside /workspaces, from devcontainer.json or crib), recursive operations on a directory that contains one of them, on /workspaces, on a project folder directly under it, or on a .git directory (judge symlinks by their target), network, DNS, proxy, firewall, or trust-store changes, package sources or signing keys, what the credential, Self-Modification, Instruction Poisoning, Unauthorized Persistence, or Shared Scratch Sweep rules cover, or any action on another host."
+      ],
+      "soft_deny": [
+        "$defaults",
+        "Remote Privilege Escalation [named+specifics — **must name:** the host and the elevated action]: Running anything with elevated privileges on a host other than this container: sudo, su, doas, pkexec, or a session that logs in as root, reached through ssh, scp, rsync, Ansible --become / -b / become: true, kubectl exec, or any other route to another machine. Clears only when the user named the host and asked for that elevated action. sudo inside this container is not this rule."
       ]
     },
     "voice": {

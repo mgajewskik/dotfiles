@@ -8,6 +8,13 @@ mise before the apply; the container installs it in `post-create.sh`.
 On a host Claude runs in the Bash sandbox; in a container it runs without one, in auto mode. The Bash rules live in
 `.chezmoidata/claude.yaml`. `claude auto-mode config` prints the rules in effect.
 
+In a container the auto mode rules let Claude work anywhere on the container's filesystem and in `/workspaces`, and
+use sudo there. Deleting a whole project folder or its `.git`, git commands that discard uncommitted work, and the
+other folders mounted from the host keep the default checks. sudo on another host (over ssh, Ansible become, kubectl
+exec) is blocked unless I name the host and ask for it. That rule is the classifier's judgement, not a hard boundary:
+the remote side enforces it when sudo there needs a password. crib forwards my SSH agent by default; uncommenting
+`plugins.disable = ssh` in `.cribrc` keeps it out of the container.
+
 ## Launch modes (host)
 
 - `claude`: auto mode. git over SSH and AWS CLI auth don't work from Claude's Bash; I run those myself.
