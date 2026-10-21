@@ -1,4 +1,12 @@
-[[ $- != *i* ]] && return # stop here for scp, rsync and other non-interactive shells
+unset BASH_ENV
+
+export EDITOR=nvim VISUAL=nvim
+export LANG="${LANG:-C.UTF-8}"
+[[ -z $SSH_AUTH_SOCK && -S $XDG_RUNTIME_DIR/ssh-agent.socket ]] && export SSH_AUTH_SOCK="$XDG_RUNTIME_DIR/ssh-agent.socket"
+PATH="$HOME/.local/bin:$PATH:$HOME/.cargo/bin:$HOME/go/bin:$HOME/.local/share/nvim/mason/bin"
+command -v mise >/dev/null && eval "$(mise activate bash)"
+
+[[ $- != *i* ]] && return # interactive only below; scp and rsync also need the shell above to stay silent
 
 HISTSIZE=290000
 HISTFILESIZE=$HISTSIZE
@@ -12,48 +20,8 @@ bind '"\e[B": history-search-forward'
 bind -m vi-command '"k": history-search-backward'
 bind -m vi-command '"j": history-search-forward'
 
-export EDITOR=nvim VISUAL=nvim
-export LANG="${LANG:-C.UTF-8}"
 export GPG_TTY="$(tty)"
-[[ -z $SSH_AUTH_SOCK && -S $XDG_RUNTIME_DIR/ssh-agent.socket ]] && export SSH_AUTH_SOCK="$XDG_RUNTIME_DIR/ssh-agent.socket"
-export BAT_THEME=ansi
-export SHELL="$BASH"
-PATH="$HOME/.local/bin:$PATH:$HOME/.cargo/bin:$HOME/go/bin:$HOME/.local/share/nvim/mason/bin"
 
-command -v mise >/dev/null && eval "$(mise activate bash)"
-command -v starship >/dev/null && eval "$(starship init bash)"
-command -v fzf >/dev/null && eval "$(fzf --bash)"
-if command -v rg >/dev/null; then
-  export FZF_DEFAULT_COMMAND='rg --files --no-ignore --hidden -g "!{.git/*,.tox/*,venv/*,.venv/*,.pyenv/*,*.pyi,*.pyc,__pycache__/*,.cache/*,.mypy_cache/*}" 2> /dev/null'
-  export FZF_CTRL_T_COMMAND="$FZF_DEFAULT_COMMAND"
-fi
-command -v zoxide >/dev/null && eval "$(zoxide init bash --cmd cd)"
-
-if command -v kubectl >/dev/null; then
-  source <(kubectl completion bash 2>/dev/null)
-  alias k="kubectl"
-  complete -o default -F __start_kubectl k
-fi
-
-command -v eza >/dev/null && alias ls="eza --git --icons --group-directories-first --time-style=long-iso --group"
-command -v nvim >/dev/null && alias v="nvim" vi="nvim"
 alias ..="cd .."
 alias c="chezmoi"
 alias mr="mise run"
-alias ta="tmux attach -t"
-alias ts="tmux new-session -s"
-alias tl="tmux list-sessions"
-
-y() {
-  local tmp cwd
-  tmp="$(mktemp -t "yazi-cwd.XXXXXX")"
-  yazi "$@" --cwd-file="$tmp"
-  if cwd="$(command cat -- "$tmp")" && [ -n "$cwd" ] && [ "$cwd" != "$PWD" ]; then
-    builtin cd -- "$cwd"
-  fi
-  rm -f -- "$tmp"
-}
-
-if [[ -r "$HOME/.bashrc.local" ]] ; then
-  source "$HOME/.bashrc.local"
-fi
