@@ -1,3 +1,9 @@
+# Claude Code's settings set BASH_ENV=$HOME/.bashrc so every Bash tool call runs this file and activates mise in
+# that call's directory; its snapshot alone keeps neither mise's hooks nor its env vars. Unset it so scripts
+# started from here don't activate again over what their caller set (`mise exec`).
+# BASH_ENV reaches every bash that Claude starts, including hooks that run outside the sandbox, where a project's
+# mise config could replace the tools they use. Hooks in the claude settings template run under `env -u BASH_ENV`;
+# plugin hooks still inherit it, which is accepted because claude runs in devcontainers.
 unset BASH_ENV
 
 export EDITOR=nvim VISUAL=nvim

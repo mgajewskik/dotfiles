@@ -40,7 +40,7 @@
           "hooks": [
             {
               "type": "command",
-              "command": "bash \"$HOME/.claude/hooks/block-writes-outside-cwd.sh\""
+              "command": "env -u BASH_ENV bash \"$HOME/.claude/hooks/block-writes-outside-cwd.sh\""
             }
           ]
         },
@@ -50,12 +50,12 @@
           "hooks": [
             {
               "type": "command",
-              "command": "rtk hook claude"
+              "command": "env -u BASH_ENV rtk hook claude"
 {{- if not .container }}
             },
             {
               "type": "command",
-              "command": "bash \"$HOME/.claude/hooks/block-cd-heredoc.sh\""
+              "command": "env -u BASH_ENV bash \"$HOME/.claude/hooks/block-cd-heredoc.sh\""
 {{- end }}
             }
           ]
@@ -67,7 +67,7 @@
           "hooks": [
             {
               "type": "command",
-              "command": "bash '{{ .chezmoi.homeDir }}/.claude/hooks/herdr-agent-state.sh' session",
+              "command": "env -u BASH_ENV bash '{{ .chezmoi.homeDir }}/.claude/hooks/herdr-agent-state.sh' session",
               "timeout": 10
             }
           ]
@@ -100,7 +100,7 @@
 {{- end }}
     "statusLine": {
       "type": "command",
-      "command": "~/.claude/statusline.sh"
+      "command": "env -u BASH_ENV ~/.claude/statusline.sh"
     },
     "extraKnownMarketplaces": {
       "claude-plugins-official": {
