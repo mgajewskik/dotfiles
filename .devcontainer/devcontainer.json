@@ -65,10 +65,16 @@
   // runs before crib installs my dotfiles; default/ and mini/ inline the same apt install (mini without socat),
   // and post-create.sh explains each package
   "postCreateCommand": ".devcontainer/post-create.sh",
-  // runs on every start, after my dotfiles; an object of named commands runs them in parallel:
-  // { "services": "make dev-services", "vnc-relay": "..." }
-  // vnc-relay: TigerVNC listens on the container's loopback only; socat relays the forwarded 5902 to it.
-  // Optional: if vncviewer connects with "127.0.0.1:5901:5901" forwarded, delete every vnc-relay line and socat.
-  "postStartCommand": "setsid -f socat TCP-LISTEN:5902,fork,reuseaddr TCP:127.0.0.1:5901 >/dev/null 2>&1",
+  // runs on every start, after my dotfiles; an object of named commands runs them in parallel
+  // ("services": "make dev-services" would be another)
+  "postStartCommand": {
+    // TigerVNC listens on the container's loopback only; socat relays the forwarded 5902 to it.
+    // Optional: if vncviewer connects with "127.0.0.1:5901:5901" forwarded, delete every vnc-relay line and socat.
+    "vnc-relay": "setsid -f socat TCP-LISTEN:5902,fork,reuseaddr TCP:127.0.0.1:5901 >/dev/null 2>&1",
+    // the herdr server my host's herdr connects to over ssh; started here so its panes get this container's
+    // environment (containerEnv, DISPLAY) rather than sshd's bare login one, and it is back after a restart.
+    // `mise exec --` puts every mise tool on its PATH, so plugins it runs find nvim (herdr-nvim's prefix+e)
+    "herdr": "setsid -f $HOME/.local/bin/mise exec -- herdr server >/tmp/herdr-server.log 2>&1"
+  },
   "waitFor": "postCreateCommand"
 }

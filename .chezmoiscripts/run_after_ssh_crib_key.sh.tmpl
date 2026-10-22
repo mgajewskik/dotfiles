@@ -1,0 +1,18 @@
+{{ if not .container -}}
+#!/bin/bash
+# creates the key ~/.ssh/config.d/crib logs in to crib containers with, when it is missing; runs on every apply.
+# Generated here rather than kept in this public repo. No passphrase: it opens only my local containers,
+# and herdr reconnects to them in the background without asking.
+
+set -euo pipefail
+
+KEY="$HOME/.ssh/crib_ed25519"
+if [ ! -f "$KEY" ]; then
+    # a .pub left without its key would make ssh-keygen ask before overwriting it
+    rm -f "$KEY.pub"
+    ssh-keygen -q -t ed25519 -N '' -C crib -f "$KEY"
+elif [ ! -f "$KEY.pub" ]; then
+    # crib copies only the .pub into containers
+    ssh-keygen -y -f "$KEY" > "$KEY.pub"
+fi
+{{ end -}}

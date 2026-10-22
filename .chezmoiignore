@@ -22,4 +22,5 @@ README.md
 
 {{ if .container }}
 .config/crib
+.ssh
 {{ end }}

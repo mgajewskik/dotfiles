@@ -20,6 +20,9 @@
     "type=bind,source=${localEnv:HOME}/.claude/projects/-workspaces-${localWorkspaceFolderBasename},target=/home/vscode/.claude/projects/-workspaces-${localWorkspaceFolderBasename}"
   ],
   "initializeCommand": "mkdir -p ${localEnv:HOME}/.claude/projects/-workspaces-${localWorkspaceFolderBasename}",
-  "postCreateCommand": "sudo apt-get update -qq && sudo DEBIAN_FRONTEND=noninteractive apt-get install -y -qq --no-install-recommends file build-essential jq bind9-dnsutils iputils-ping netcat-openbsd traceroute tcpdump mtr-tiny nmap iperf3 whois",
+  "postCreateCommand": "sudo apt-get update -qq && sudo DEBIAN_FRONTEND=noninteractive apt-get install -y -qq --no-install-recommends file build-essential jq bind9-dnsutils iputils-ping netcat-openbsd traceroute tcpdump mtr-tiny nmap iperf3 whois openssh-server && if [ -f ~/.ssh/crib_ed25519.pub ]; then cp ~/.ssh/crib_ed25519.pub ~/.ssh/authorized_keys; fi",
+  "postStartCommand": {
+    "herdr": "setsid -f $HOME/.local/bin/mise exec -- herdr server >/tmp/herdr-server.log 2>&1"
+  },
   "waitFor": "postCreateCommand"
 }

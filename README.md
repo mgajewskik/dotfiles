@@ -102,3 +102,29 @@ The first time on a host, the Claude folder and gpg socket it mounts must exist:
 ```sh
 mkdir -p ~/.claude/projects/-workspaces-chezmoi-mount && gpg-connect-agent /bye
 ```
+
+### A container as a herdr machine
+
+My host's herdr can treat each container as its own machine: panes, the nvim sidebar and agents run inside it, and
+their notifications reach the host. The containers install sshd, and `~/.ssh/config.d/crib` starts it for each
+connection through `podman exec`, so nothing listens on the network. It logs in with `~/.ssh/crib_ed25519`, which
+`chezmoi apply` creates when it's missing; crib copies its `.pub` into each container. Once per host, I make
+`Include ~/.ssh/config.d/*` the first line of `~/.ssh/config`. Further down, it would only apply to the `Host` block
+above it. For each project, after `crib up`:
+
+```sh
+crib list                                             # its workspace id, e.g. myapp-1a2b3c4
+herdr machine add crib-myapp-1a2b3c4 --label myapp
+```
+
+The id survives rebuilds. A container created before the key existed needs `crib rebuild`. With
+`plugins.disable = ssh` in `.cribrc`, crib copies no keys, so that container can't be a machine.
+
+When it stops working, I check from the bottom up; the first failing row is the problem:
+
+| Layer                   | Check                               | If it fails                                                                                |
+| ----------------------- | ----------------------------------- | ------------------------------------------------------------------------------------------ |
+| the container runs      | `crib status`                       | `crib up`                                                                                  |
+| ssh gets in             | `ssh crib-<id> true`                | `ssh -v crib-<id> true`; sshd's own errors: `-e` after `sshd -i` in `~/.ssh/config.d/crib` |
+| herdr runs inside       | `crib run -- herdr status server`   | `crib run -- tail -50 /tmp/herdr-server.log`                                               |
+| my host's herdr sees it | `herdr machine status myapp --json` | `herdr machine reconnect myapp`                                                            |
