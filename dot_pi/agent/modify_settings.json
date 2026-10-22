@@ -1,0 +1,16 @@
+{{- /* chezmoi:modify-template */ -}}
+{{- /* sets these keys in ~/.pi/agent/settings.json and keeps the rest; pi writes this file itself (lastChangelogVersion,
+       the model picked with /model), so as a plain file chezmoi would stop and ask before overwriting it.
+       A /model pick lasts until the next apply sets it back to the model here */ -}}
+{{- $settings := dict
+  "hideThinkingBlock" true
+  "defaultProvider" "openai-codex"
+  "defaultModel" "gpt-6.1-sol"
+  "defaultThinkingLevel" "high"
+  "theme" "dark"
+-}}
+{{- $current := dict -}}
+{{- if trim .chezmoi.stdin -}}
+{{- $current = fromJson .chezmoi.stdin -}}
+{{- end -}}
+{{- merge $settings $current | toPrettyJson -}}

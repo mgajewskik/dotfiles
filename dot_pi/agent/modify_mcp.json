@@ -1,0 +1,17 @@
+{{- /* chezmoi:modify-template */ -}}
+{{- /* sets these servers in ~/.pi/agent/mcp.json and keeps the rest; pi writes this file itself (`pi mcp add`,
+       exposure and enabled changes), so as a plain file chezmoi would stop and ask before overwriting it */ -}}
+{{- $mcp := `{
+  "mcpServers": {
+    "context7": {
+      "url": "https://mcp.context7.com/mcp",
+      "exposure": "direct",
+      "description": "Search current, version-specific library and API documentation with Context7"
+    }
+  }
+}` | fromJson -}}
+{{- $current := dict -}}
+{{- if trim .chezmoi.stdin -}}
+{{- $current = fromJson .chezmoi.stdin -}}
+{{- end -}}
+{{- merge $mcp $current | toPrettyJson -}}

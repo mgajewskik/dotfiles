@@ -1,0 +1,9 @@
+{
+  "app.editor.external": ["ctrl+g", "ctrl+e"],
+  "tui.editor.cursorLineEnd": ["end"],
+  "tui.altScreen.halfPageUp": ["ctrl+u"],
+  "tui.altScreen.halfPageDown": ["ctrl+d"],
+  "tui.editor.deleteToLineStart": [],
+  "tui.editor.deleteCharForward": ["delete"],
+  "app.exit": []
+}

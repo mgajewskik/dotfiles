@@ -17,6 +17,7 @@ flowchart LR
         Tools["mise tools<br/>pinned by mise.lock"]
         Externals["nvim config, agent skills,<br/>zsh plugins"]
         Claude["Claude Code<br/>settings, plugins, MCP"]
+        Pi["pi<br/>settings, extensions, MCP"]
         Gpg["gpg public key"]
     end
 ```
@@ -59,6 +60,10 @@ sh -c "$(curl -fsLS get.chezmoi.io)" -- -b ~/.local/bin init --apply mgajewskik
 - **tmux**: `prefix I` installs, `prefix U` updates.
 - **Claude Code**: plugins go in `enabledPlugins` in `.chezmoitemplates/claude/settings.json`, MCP servers in
   `.chezmoiscripts/run_onchange_after_plugins_claude.sh.tmpl`.
+- **pi**: after editing an extension in place, `chezmoi re-add ~/.pi/agent`; a new one needs
+  `chezmoi add ~/.pi/agent/extensions/<file>`. Settings and MCP servers go in `dot_pi/agent/modify_settings.json` and
+  `modify_mcp.json`, which set their keys and keep the ones pi writes itself. crib copies `~/.pi/agent/auth.json` into
+  each container; elsewhere, `/login` in pi.
 - After changing `.chezmoi.toml.tmpl`, I run `chezmoi init` on each machine before the next apply, or the templates
   fail with `map has no entry for key`.
 
