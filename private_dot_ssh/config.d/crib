@@ -2,10 +2,10 @@
 Host crib-*
   User vscode
   ProxyCommand podman exec -i -u root %h sh -c 'mkdir -p /run/sshd; exec /usr/sbin/sshd -i'
+  KnownHostsCommand /bin/sh -c 'printf "%%s " "$2"; podman exec "$1" cat /etc/ssh/ssh_host_ed25519_key.pub' sh %h %H
   IdentityFile ~/.ssh/crib_ed25519
   IdentitiesOnly yes
   PasswordAuthentication no
   KbdInteractiveAuthentication no
-  StrictHostKeyChecking no
   UserKnownHostsFile /dev/null
   LogLevel ERROR

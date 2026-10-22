@@ -122,9 +122,9 @@ The id survives rebuilds. A container created before the key existed needs `crib
 
 When it stops working, I check from the bottom up; the first failing row is the problem:
 
-| Layer                   | Check                               | If it fails                                                                                |
-| ----------------------- | ----------------------------------- | ------------------------------------------------------------------------------------------ |
-| the container runs      | `crib status`                       | `crib up`                                                                                  |
-| ssh gets in             | `ssh crib-<id> true`                | `ssh -v crib-<id> true`; sshd's own errors: `-e` after `sshd -i` in `~/.ssh/config.d/crib` |
-| herdr runs inside       | `crib run -- herdr status server`   | `crib run -- tail -50 /tmp/herdr-server.log`                                               |
-| my host's herdr sees it | `herdr machine status myapp --json` | `herdr machine reconnect myapp`                                                            |
+| Layer                   | Check                                                              | If it fails                                                                                |
+| ----------------------- | ------------------------------------------------------------------ | ------------------------------------------------------------------------------------------ |
+| the container runs      | `crib status`                                                      | `crib up`                                                                                  |
+| ssh gets in             | `ssh -o BatchMode=yes -o StrictHostKeyChecking=yes crib-<id> true` | `ssh -v crib-<id> true`; sshd's own errors: `-e` after `sshd -i` in `~/.ssh/config.d/crib` |
+| herdr runs inside       | `crib run -- herdr status server`                                  | `crib run -- tail -50 /tmp/herdr-server.log`                                               |
+| my host's herdr sees it | `herdr machine status myapp --json`                                | `herdr machine reconnect myapp`                                                            |
