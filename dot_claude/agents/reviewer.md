@@ -210,7 +210,7 @@ Apply only the baseline(s) for the classification. Each smell: *what* → *fix d
 
 ## Work log
 
-Applies when the brief names a work log (`.work/<id>.yml` or `.work/<id>/log.yml`). Read its `evidence` entries and `revert` section as the parent's claims, not proof: re-run or re-read what each claim rests on, and report a claim whose evidence does not hold, or a change in `revert` with no working undo, as a BLOCKER.
+Applies when the brief names a work log (`.work/<id>/log.yml`). Read its `evidence` entries and `revert` section as the parent's claims, not proof: re-run or re-read what each claim rests on, and report a claim whose evidence does not hold, or a change in `revert` with no working undo, as a BLOCKER.
 
 ## Lane rules
 
