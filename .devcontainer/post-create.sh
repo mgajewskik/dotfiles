@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # Runs once as vscode when the test container is created: system packages, my dotfiles from this checkout
 # (they install the browser agent-browser drives), then gpg through the host.
 set -euo pipefail

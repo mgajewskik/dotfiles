@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 set -eu
 
 if command -v zsh >/dev/null && sudo -n true 2>/dev/null; then

@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 set -euo pipefail
 
 mkdir -p ~/.gnupg && chmod 700 ~/.gnupg

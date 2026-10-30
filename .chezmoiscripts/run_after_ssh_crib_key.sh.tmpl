@@ -1,5 +1,5 @@
 {{ if not .container -}}
-#!/bin/bash
+#!/usr/bin/env bash
 # creates the key ~/.ssh/config.d/crib logs in to crib containers with, when it is missing; runs on every apply.
 # Generated here rather than kept in this public repo. No passphrase: it opens only my local containers,
 # and herdr reconnects to them in the background without asking.
