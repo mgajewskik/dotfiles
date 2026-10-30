@@ -3,9 +3,6 @@ experimental = true
 minimum_release_age = "7d"
 all_compile = false
 
-[settings.python]
-compile = true
-
 [settings.github]
 credential_command = "gh auth token"
 
@@ -34,6 +31,7 @@ ty = "latest"
 "github:dalance/procs" = "latest"
 gh = "latest"
 go = "latest"
+python = "latest"
 node = "latest" # npm-based language servers (bash, typescript)
 {{- if not .container }}
 "github:fgrehm/crib" = "latest"
