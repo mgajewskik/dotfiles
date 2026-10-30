@@ -1,0 +1,14 @@
+[Unit]
+Description=EasyEffects
+After=graphical-session.target
+PartOf=graphical-session.target
+
+[Service]
+Type=simple
+ExecStart={{ .systemPrefix }}/bin/easyeffects --service-mode --hide-window
+Restart=on-failure
+RestartSec=3
+CPUWeight=10000
+
+[Install]
+WantedBy=graphical-session.target

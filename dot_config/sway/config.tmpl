@@ -1,0 +1,234 @@
+# Sway default session config.
+# UWSM default-id is expected to be sway.desktop.
+
+include ~/.config/sway/conf.d/*.conf
+
+set $mod Mod4
+set $alt Mod1
+set $term alacritty
+set $menu vicinae toggle
+set $clipboard vicinae 'vicinae://launch/clipboard/history?toggle=true'
+set $lock swaylock -i ~/.config/sway/wallpapers/simple_arch.png -s fill
+
+font pango:JetBrainsMono Nerd Font 10
+default_border pixel 2
+default_floating_border pixel 2
+
+# Kanagawa window colors: class border background text indicator child_border
+client.focused          #7E9CD8 #7E9CD8 #1F1F28 #7FB4CA #7E9CD8
+client.focused_inactive #54546D #2A2A37 #DCD7BA #54546D #54546D
+client.unfocused        #2A2A37 #1F1F28 #727169 #2A2A37 #2A2A37
+client.urgent           #E46876 #E46876 #1F1F28 #E46876 #E46876
+hide_edge_borders smart
+smart_gaps on
+gaps inner 0
+gaps outer 0
+focus_follows_mouse yes
+mouse_warping output
+floating_modifier $mod normal
+focus_on_window_activation urgent
+
+# Match sway.desktop and make portal selection prefer sway before generic wlroots.
+exec_always systemctl --user set-environment XDG_CURRENT_DESKTOP=sway:wlroots SWAYSOCK=$SWAYSOCK XCURSOR_THEME=phinger-cursors-light XCURSOR_SIZE=24
+exec_always dbus-update-activation-environment --systemd DISPLAY WAYLAND_DISPLAY SWAYSOCK XDG_RUNTIME_DIR DBUS_SESSION_BUS_ADDRESS XDG_SESSION_TYPE XDG_CURRENT_DESKTOP=sway:wlroots XCURSOR_THEME XCURSOR_SIZE
+
+# swaymsg -t get_outputs
+output DP-2 mode 3840x1600@60Hz position 0 0 scale 1
+output eDP-1 mode 1920x1200@60Hz position 3840 0 scale 1
+output DP-1 mode 1920x1080@60Hz position 0 0 scale 1
+
+input * {
+    # temporarily slow down myself
+    repeat_rate 20
+    repeat_delay 400
+    # repeat_rate 80
+    # repeat_delay 200
+    xkb_layout pl
+    xkb_options ctrl:nocaps
+    tap enabled
+    drag enabled
+    drag_lock enabled
+    natural_scroll disabled
+    dwt enabled
+    middle_emulation disabled
+    pointer_accel 0.7
+}
+
+input type:touchpad {
+    natural_scroll enabled
+}
+
+seat seat0 xcursor_theme phinger-cursors-light 24
+
+bindsym $mod+q kill
+bindsym $mod+Shift+q mode "system"
+bindsym $mod+Return exec $term
+bindsym $mod+Shift+r reload
+bindsym $mod+c exec $clipboard
+bindsym $mod+w exec pavucontrol
+bindsym $mod+Escape exec $lock
+
+bindsym $alt+Tab exec $menu
+bindsym $alt+r exec sh -c '$HOME/.config/sway/screen-record.sh toggle; pkill -RTMIN+8 waybar'
+bindsym $alt+Shift+r exec sh -c '$HOME/.config/sway/screen-record.sh region; pkill -RTMIN+8 waybar'
+bindsym $alt+w exec helium-browser
+bindsym $alt+e exec nemo ~/downloads
+bindsym $alt+p exec {{ if .nixos }}bitwarden{{ else }}bitwarden-desktop{{ end }}
+bindsym --release Control_R exec voxtype record toggle
+bindsym $alt+n exec makoctl mode -t do-not-disturb
+
+bindsym Print exec $HOME/.config/sway/screenshot.sh
+bindsym XF86AudioRaiseVolume exec wpctl set-volume -l 1.4 @DEFAULT_AUDIO_SINK@ 5%+
+bindsym XF86AudioLowerVolume exec wpctl set-volume -l 1.4 @DEFAULT_AUDIO_SINK@ 5%-
+bindsym XF86AudioMute exec wpctl set-mute @DEFAULT_AUDIO_SINK@ toggle
+bindsym XF86AudioMicMute exec wpctl set-mute @DEFAULT_AUDIO_SOURCE@ toggle
+bindsym XF86MonBrightnessUp exec brightnessctl set 10%+
+bindsym XF86MonBrightnessDown exec brightnessctl set 10%-
+bindsym XF86Display exec sh -c 'if systemctl --user is-active --quiet hypridle-sway.service; then systemctl --user stop hypridle-sway.service; else systemctl --user start hypridle-sway.service; fi; pkill -RTMIN+9 waybar'
+
+bindsym $mod+f fullscreen toggle
+bindsym $mod+Shift+f floating toggle
+
+bindsym $mod+Shift+s floating enable, resize set width 70 ppt height 95 ppt, mark --replace alpha, move scratchpad
+bindsym $mod+s [con_mark="^alpha$"] scratchpad show, resize set width 70 ppt height 95 ppt, move position center
+bindsym $alt+Shift+s floating enable, resize set width 70 ppt height 95 ppt, mark --replace beta, move scratchpad
+bindsym $alt+s [con_mark="^beta$"] scratchpad show, resize set width 70 ppt height 95 ppt, move position center
+
+bindsym $mod+i split h
+bindsym $mod+o split v
+bindsym $mod+a layout tabbed
+bindsym $mod+d layout toggle split
+
+set $ws1 "1"
+set $ws2 "2"
+set $ws3 "3"
+set $ws4 "4"
+set $ws5 "5"
+set $ws6 "6"
+set $ws7 "7"
+set $ws8 "8"
+set $ws9 "9"
+set $ws0 "0"
+set $ws10 "10"
+set $ws11 "11"
+set $ws12 "12"
+set $ws13 "13"
+set $ws14 "14"
+set $ws15 "15"
+set $ws16 "16"
+set $ws17 "17"
+set $ws18 "18"
+set $ws19 "19"
+
+bindsym $mod+1 workspace number $ws1
+bindsym $mod+2 workspace number $ws2
+bindsym $mod+3 workspace number $ws3
+bindsym $mod+4 workspace number $ws4
+bindsym $mod+5 workspace number $ws5
+bindsym $mod+6 workspace number $ws6
+bindsym $mod+7 workspace number $ws7
+bindsym $mod+8 workspace number $ws8
+bindsym $mod+9 workspace number $ws9
+bindsym $mod+0 workspace number $ws0
+bindsym $alt+1 workspace number $ws11
+bindsym $alt+2 workspace number $ws12
+bindsym $alt+3 workspace number $ws13
+bindsym $alt+4 workspace number $ws14
+bindsym $alt+5 workspace number $ws15
+bindsym $alt+6 workspace number $ws16
+bindsym $alt+7 workspace number $ws17
+bindsym $alt+8 workspace number $ws18
+bindsym $alt+9 workspace number $ws19
+bindsym $alt+0 workspace number $ws10
+
+bindsym $mod+Shift+1 move container to workspace number $ws1
+bindsym $mod+Shift+2 move container to workspace number $ws2
+bindsym $mod+Shift+3 move container to workspace number $ws3
+bindsym $mod+Shift+4 move container to workspace number $ws4
+bindsym $mod+Shift+5 move container to workspace number $ws5
+bindsym $mod+Shift+6 move container to workspace number $ws6
+bindsym $mod+Shift+7 move container to workspace number $ws7
+bindsym $mod+Shift+8 move container to workspace number $ws8
+bindsym $mod+Shift+9 move container to workspace number $ws9
+bindsym $mod+Shift+0 move container to workspace number $ws0
+bindsym $alt+Shift+1 move container to workspace number $ws11
+bindsym $alt+Shift+2 move container to workspace number $ws12
+bindsym $alt+Shift+3 move container to workspace number $ws13
+bindsym $alt+Shift+4 move container to workspace number $ws14
+bindsym $alt+Shift+5 move container to workspace number $ws15
+bindsym $alt+Shift+6 move container to workspace number $ws16
+bindsym $alt+Shift+7 move container to workspace number $ws17
+bindsym $alt+Shift+8 move container to workspace number $ws18
+bindsym $alt+Shift+9 move container to workspace number $ws19
+bindsym $alt+Shift+0 move container to workspace number $ws10
+
+bindsym $mod+Tab focus next
+bindsym $mod+h focus left
+bindsym $mod+l focus right
+bindsym $mod+k focus up
+bindsym $mod+j focus down
+
+bindsym $mod+Ctrl+h move left
+bindsym $mod+Ctrl+l move right
+bindsym $mod+Ctrl+k move up
+bindsym $mod+Ctrl+j move down
+
+bindsym $mod+Shift+h move workspace to output left
+bindsym $mod+Shift+l move workspace to output right
+bindsym $mod+Shift+k move workspace to output up
+bindsym $mod+Shift+j move workspace to output down
+
+bindsym $alt+h focus output left
+bindsym $alt+l focus output right
+bindsym $alt+j focus output down
+bindsym $alt+k focus output up
+bindsym $alt+Ctrl+h move container to output left
+bindsym $alt+Ctrl+l move container to output right
+bindsym $alt+Ctrl+j move container to output down
+bindsym $alt+Ctrl+k move container to output up
+
+bindswitch --reload --locked lid:on output eDP-1 power off
+bindswitch --reload --locked lid:off output eDP-1 power on
+
+for_window [title="Authentication required"] floating enable
+for_window [title="Keybindings"] floating enable
+for_window [title="Rename.*"] floating enable
+for_window [title="Compressing.*"] floating enable
+for_window [title="File Already Exists.*"] floating enable
+for_window [title="Extracting Files.*"] floating enable
+for_window [title="File Operation Progress.*"] floating enable
+for_window [title="Confirm to replace files.*"] floating enable
+
+for_window [app_id="pavucontrol"] floating enable
+for_window [app_id="udiskie"] floating enable
+for_window [app_id="blueman-manager"] floating enable
+
+bindsym $mod+r mode "resize"
+mode "resize" {
+    bindsym l resize shrink width 5 px or 5 ppt
+    bindsym k resize grow height 5 px or 5 ppt
+    bindsym j resize shrink height 5 px or 5 ppt
+    bindsym h resize grow width 5 px or 5 ppt
+
+    bindsym Right resize shrink width 10 px or 10 ppt
+    bindsym Up resize grow height 10 px or 10 ppt
+    bindsym Down resize shrink height 10 px or 10 ppt
+    bindsym Left resize grow width 10 px or 10 ppt
+
+    bindsym Return mode "default"
+    bindsym Escape mode "default"
+    bindsym $mod+r mode "default"
+}
+
+# System mode: l lock | e exit | s suspend | h hibernate | r reboot | Shift+s shutdown
+mode "system" {
+    bindsym l mode "default", exec $lock
+    bindsym e exit
+    bindsym s mode "default", exec systemctl suspend
+    bindsym h mode "default", exec systemctl hibernate
+    bindsym r mode "default", exec systemctl reboot
+    bindsym Shift+s mode "default", exec systemctl poweroff
+
+    bindsym Return mode "default"
+    bindsym Escape mode "default"
+}

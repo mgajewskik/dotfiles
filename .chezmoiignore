@@ -11,6 +11,31 @@ README.md
 .profile
 .zprofile
 .config/uwsm
+.config/sway
+.config/waybar
+.config/mako
+.config/wlogout
+.config/xdg-desktop-portal
+.config/xdg-desktop-portal-wlr
+.config/gtk-3.0
+.config/gtk-4.0
+.config/voxtype
+.config/autostart
+.config/systemd
+.config/user-dirs.dirs
+.local/share/easyeffects
+desktop
+downloads
+documents
+music
+pictures
+videos
+{{ end }}
+
+{{ if .nixos }}
+.config/systemd/user/default.target.wants/syncthing.service
+.config/systemd/user/graphical-session.target.wants/mako.service
+.config/systemd/user/graphical-session.target.wants/vicinae.service
 {{ end }}
 
 {{ if .remote }}

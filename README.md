@@ -1,8 +1,8 @@
 # dotfiles
 
-My shell, editor and terminal setup, managed with [chezmoi](https://www.chezmoi.io/). One command sets up a desktop,
-a server or a container without asking anything, and [mise](https://mise.jdx.dev/) installs my tools at the versions
-pinned in a lockfile.
+My shell, editor, terminal and Sway desktop setup, managed with [chezmoi](https://www.chezmoi.io/). One command sets
+up a desktop, a server or a container without asking anything, and [mise](https://mise.jdx.dev/) installs my tools at
+the versions pinned in a lockfile.
 
 ```mermaid
 flowchart LR
@@ -31,7 +31,7 @@ sh -c "$(curl -fsLS get.chezmoi.io)" -- -b ~/.local/bin init --apply mgajewskik
 - Dotfiles already there: drop `--apply`, read `chezmoi diff`, then `chezmoi apply`.
 - YubiKey on this machine: install its [packages](#yubikey) first, so the first apply imports my public key.
 - Desktop set up over SSH: `env -u SSH_CONNECTION chezmoi init`, or it counts as a server.
-- What it detected: `chezmoi data | grep -E '"(remote|container)"'`.
+- What it detected: `chezmoi data | grep -E '"(remote|container|nixos)"'`.
 - Another git identity on this machine: a `[user]` block in `~/.gitconfig.local`, which git reads last.
 
 ## Day to day

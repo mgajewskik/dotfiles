@@ -1,0 +1,258 @@
+{
+    "layer": "top", // Waybar at top layer
+    "position": "top",
+    "height": 20,
+
+    "modules-left": [
+        "sway/workspaces",
+        "sway/mode"
+    ],
+    "modules-center": ["clock"],
+    "modules-right": [
+        "privacy",
+        "custom/voxtype",
+        "custom/screen-record",
+        "custom/idle-inhibitor",
+        "group/tray-expander",
+        "network#wifi",
+        "network#vpn",
+        "pulseaudio",
+        "backlight",
+        "battery",
+        "group/actions"
+    ],
+
+    "sway/workspaces": {
+        "format": "{name}",
+        "disable-scroll": false,
+        "all-outputs": false,
+        "on-click": "activate",
+        "sort-by-number": true
+    },
+
+    "sway/mode": {
+        "format": "<span style=\"italic\">{}</span>",
+        "tooltip": false
+    },
+
+    "privacy": {
+        "icon-spacing": 4,
+        "icon-size": 14,
+        "transition-duration": 250,
+        "modules": [
+            {
+                "type": "screenshare",
+                "tooltip": true,
+                "tooltip-icon-size": 20
+            },
+            {
+                "type": "audio-out",
+                "tooltip": true,
+                "tooltip-icon-size": 20
+            },
+            {
+                "type": "audio-in",
+                "tooltip": true,
+                "tooltip-icon-size": 20
+            }
+        ]
+    },
+
+    // Tray hidden behind an arrow; hover to slide it open.
+    "group/tray-expander": {
+        "orientation": "inherit",
+        "drawer": {
+            "transition-duration": 400,
+            "children-class": "drawer-child",
+            "transition-left-to-right": false
+        },
+        "modules": ["custom/expand-icon", "tray"]
+    },
+
+    "custom/expand-icon": {
+        "format": "",
+        "tooltip": false
+    },
+
+    // Power button; hover to reveal screenshot, recording, idle, move-to-DP-2 and restart-waybar.
+    "group/actions": {
+        "orientation": "inherit",
+        "drawer": {
+            "transition-duration": 400,
+            "children-class": "drawer-child",
+            "transition-left-to-right": false
+        },
+        "modules": [
+            "custom/exit",
+            "custom/screenshot",
+            "custom/record-toggle",
+            "custom/idle-toggle",
+            "custom/move-workspaces-dp2",
+            "custom/restart-waybar"
+        ]
+    },
+
+    "custom/restart-waybar": {
+        "format": "󰑓",
+        "tooltip-format": "Restart Waybar",
+        "on-click": "systemctl --user restart waybar.service"
+    },
+
+    "custom/exit": {
+        "format": "⏻",
+        "tooltip-format": "Powermenu",
+        "on-click": "wlogout -b 4",
+        "tooltip": false
+    },
+
+    "custom/screenshot": {
+        "format": "󰩭",
+        "tooltip-format": "Screenshot",
+        "on-click": "~/.config/sway/screenshot.sh"
+    },
+
+    // Shown only while recording/transcribing, or when the daemon is down (Right Ctrl toggles it).
+    "custom/voxtype": {
+        "exec": "voxtype status --follow --format json --extended",
+        "return-type": "json",
+        "format": "{icon}",
+        "format-icons": {
+            "idle": "",
+            "recording": "󰍬",
+            "transcribing": "󰔟",
+            "stopped": "󰍭"
+        },
+        "on-click": "voxtype record toggle",
+        "on-click-right": "systemctl --user restart voxtype"
+    },
+
+    // Shown only while recording (Alt+r / Alt+Shift+r start it).
+    "custom/screen-record": {
+        "return-type": "json",
+        "exec": "if pgrep -x gpu-screen-reco >/dev/null; then echo '{\"text\": \"󰻂\", \"tooltip\": \"Recording... (click to stop)\", \"class\": \"on\"}'; else echo '{\"text\": \"\"}'; fi",
+        "interval": 30,
+        "signal": 8,
+        "on-click": "~/.config/sway/screen-record.sh toggle; pkill -RTMIN+8 waybar",
+        "on-click-right": "~/.config/sway/screen-record.sh region; pkill -RTMIN+8 waybar"
+    },
+
+    // Shown only while hypridle-sway is stopped (XF86Display toggles it).
+    "custom/idle-inhibitor": {
+        "return-type": "json",
+        "exec": "if systemctl --user is-active --quiet hypridle-sway.service; then echo '{\"text\": \"\"}'; else echo '{\"text\": \"󰅶\", \"tooltip\": \"hypridle-sway stopped (click to start)\", \"class\": \"on\"}'; fi",
+        "interval": 30,
+        "signal": 9,
+        "on-click": "sh -c 'if systemctl --user is-active --quiet hypridle-sway.service; then systemctl --user stop hypridle-sway.service; else systemctl --user start hypridle-sway.service; fi; pkill -RTMIN+9 waybar'"
+    },
+
+    // Drawer buttons for starting what the indicators above show.
+    "custom/record-toggle": {
+        "format": "󰻃",
+        "tooltip-format": "Record screen (right-click: region)",
+        "on-click": "~/.config/sway/screen-record.sh toggle; pkill -RTMIN+8 waybar",
+        "on-click-right": "~/.config/sway/screen-record.sh region; pkill -RTMIN+8 waybar"
+    },
+
+    "custom/idle-toggle": {
+        "format": "󰾪",
+        "tooltip-format": "Toggle hypridle-sway",
+        "on-click": "sh -c 'if systemctl --user is-active --quiet hypridle-sway.service; then systemctl --user stop hypridle-sway.service; else systemctl --user start hypridle-sway.service; fi; pkill -RTMIN+9 waybar'"
+    },
+
+    "custom/move-workspaces-dp2": {
+        "format": "󰍹",
+        "tooltip-format": "Move workspaces to DP-2",
+        "on-click": "~/.config/sway/move-workspaces-to-dp2.sh"
+    },
+
+    "clock": {
+        "format": "󰸗 {:%Y-%m-%d %T %a}",
+        "interval": 1,
+        "tooltip": true,
+        "locale": "pl_PL.utf8",
+        "tooltip-format": "<tt><span size='14pt'>{calendar}</span></tt>",
+        "calendar": {
+            "weeks-pos": "left",
+            "on-scroll": 1,
+            "format": {
+                "months": "<span color='#DCD7BA'><b>{}</b></span>",
+                "days": "<span color='#C8C093'>{}</span>",
+                "weeks": "<span color='#938AA9'>W{}</span>",
+                "weekdays": "<span color='#7E9CD8'><b>{}</b></span>",
+                "today": "<span color='#E46876'><b><u>{}</u></b></span>"
+            }
+        },
+        "actions": {
+            "on-click-right": "mode",
+            "on-scroll-up": "shift_up",
+            "on-scroll-down": "shift_down"
+        }
+    },
+
+    "network#wifi": {
+        "interface": "wl*",
+        "format-wifi": "󰖩 {essid}",
+        "format-disconnected": "󰖪",
+        "tooltip-format-wifi": "{essid} ({signalStrength}%) - {ipaddr}/{cidr}",
+        "on-click": "alacritty -e impala"
+    },
+
+    "network#vpn": {
+        "interface": "tun0",
+        "format-ethernet": "󰌾 {ifname}",
+        "format-disconnected": "",
+        "tooltip-format-ethernet": "VPN: {ifname} - {ipaddr}/{cidr}",
+        "on-click": "alacritty -e bash -c 'echo \"=== Routes ===\"; ip route show dev tun0; echo; echo \"=== DNS ===\"; resolvectl status tun0 2>/dev/null; echo; echo \"=== Interface ===\"; ip addr show tun0; echo; read -p \"Press enter to close\"'"
+    },
+
+    "pulseaudio": {
+        "format": "{icon} {volume}%",
+        "format-bluetooth": "{volume}% {icon} {format_source}",
+        "format-bluetooth-muted": "󰝟 {icon} {format_source}",
+        "format-muted": "0% {icon}",
+        "format-source": "{volume}% ",
+        "format-source-muted": "",
+        "format-icons": {
+            "headphones": "",
+            "handsfree": "",
+            "hands-free": "",
+            "headset": "",
+            "phone": "",
+            "portable": "",
+            "car": "",
+            "default": ["", "", ""]
+        },
+        "on-click": "pavucontrol"
+    },
+
+    // Remaining time moved to the tooltip; watts stay on the bar.
+    "battery": {
+        "states": {
+            "warning": 30,
+            "critical": 15
+        },
+        "interval": 10,
+        "format": "{power:.1f} W {capacity}% {icon}",
+        "format-time": "{H}h{M}m",
+        "format-charging": "{power:.1f} W {capacity}% 󰂅",
+        "format-plugged": " {capacity}%",
+        "format-icons": ["󰁺", "󰁻", "󰁼", "󰁽", "󰁾", "󰁿", "󰂀", "󰂁", "󰂂", "󰁹"],
+        "tooltip-format": "{time}"
+    },
+
+    "backlight": {
+        "format": "{percent}% {icon}",
+        "format-icons": [
+            "󰃞",
+            "󰃝",
+            "󰃟",
+            "󰃠"
+        ],
+        "scroll-step": 5
+    },
+
+    "tray": {
+        "icon-size": 21,
+        "spacing": 6
+    }
+}

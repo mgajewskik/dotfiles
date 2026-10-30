@@ -1,0 +1,84 @@
+engine = "parakeet"
+
+[whisper]
+model = "base.en"
+mode = "local"
+language = "auto"
+translate = false
+flash_attention = false
+on_demand_loading = false
+gpu_isolation = false
+eager_processing = false
+
+[parakeet]
+# model = "parakeet-tdt-0.6b-v3-int8"
+model = "parakeet-tdt-0.6b-v3"
+on_demand_loading = false
+streaming = false
+
+[hotkey]
+key = "RIGHTCTRL"
+mode = "toggle"
+enabled = false
+
+[audio]
+device = "default"
+max_duration_secs = 600
+pause_media = false
+duck_media = true
+duck_media_volume_percent = 34
+duck_media_fade_ms = 150
+
+[audio.feedback]
+enabled = false
+theme = "default"
+volume = 0.699999988079071
+
+[output]
+mode = "type"
+fallback_to_clipboard = true
+auto_submit = false
+shift_enter_newlines = false
+pre_type_delay_ms = 0
+
+[output.notification]
+on_recording_start = false
+on_recording_stop = false
+on_transcription = false
+show_engine_icon = true
+
+[text]
+spoken_punctuation = true
+smart_auto_submit = true
+
+[vad]
+enabled = false
+backend = "auto"
+threshold = 0.5
+
+[meeting]
+enabled = false
+
+[meeting.diarization]
+enabled = false
+
+[meeting.audio]
+source = "mic"
+
+[osd]
+enabled = true
+frontend = "gtk4"
+style = "default"
+layout = "compact"
+position = "bottom-center"
+width_px = 400
+height_px = 48
+margin_px = 24
+top_margin = 0.85
+opacity = 0.95
+waveform_window_secs = 3.0
+peak_decay_db_per_sec = 6.0
+waveform_gain = 10.0
+
+[status]
+icon_theme = "emoji"

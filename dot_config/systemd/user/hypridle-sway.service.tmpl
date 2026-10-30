@@ -1,0 +1,15 @@
+[Unit]
+Description=Hypridle for Sway sessions
+Documentation=https://wiki.hypr.land/0.45.0/Hypr-Ecosystem/hypridle/
+PartOf=graphical-session.target
+After=graphical-session.target
+
+[Service]
+Type=simple
+ExecCondition=/bin/sh -c 'case "$XDG_CURRENT_DESKTOP" in sway|sway:*) swaymsg -t get_version >/dev/null 2>&1 ;; *) exit 1 ;; esac'
+ExecStart={{ .systemPrefix }}/bin/hypridle --config %h/.config/sway/hypridle.conf
+Restart=on-failure
+RestartSec=3
+
+[Install]
+WantedBy=graphical-session.target

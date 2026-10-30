@@ -1,0 +1,133 @@
+/* Kanagawa palette */
+@define-color bg #1F1F28;
+@define-color bg-light #363646;
+@define-color fg #DCD7BA;
+@define-color fg-dim #727169;
+@define-color blue #7E9CD8;
+@define-color red #E46876;
+@define-color red-dark #C34043;
+@define-color yellow #E6C384;
+
+* {
+    border: none;
+    border-radius: 0;
+    font-family: JetBrainsMono Nerd Font;
+    font-size: 15px;
+}
+
+window#waybar {
+    background: @bg;
+    color: @fg;
+}
+
+#workspaces {
+    font-weight: bold;
+    padding: 0 5px;
+}
+
+#workspaces button {
+    padding: 0 5px;
+    background: transparent;
+    color: @fg;
+}
+
+#workspaces button.focused {
+    color: @bg;
+    background: @blue;
+    border-radius: 15px;
+    min-width: 40px;
+    transition: all 0.3s ease-in-out;
+}
+
+#workspaces button.urgent {
+    color: @red;
+}
+
+#mode {
+    background: @bg;
+    border-bottom: 3px solid white;
+}
+
+/* Spacing comes from margins instead of "|" separators */
+#clock,
+#privacy,
+#custom-voxtype,
+#custom-screen-record,
+#custom-idle-inhibitor,
+#custom-expand-icon,
+#tray,
+#network,
+#pulseaudio,
+#backlight,
+#battery,
+#mode,
+#custom-exit,
+#custom-screenshot,
+#custom-record-toggle,
+#custom-idle-toggle,
+#custom-move-workspaces-dp2,
+#custom-restart-waybar {
+    padding: 0 4px;
+    margin: 0 6px;
+    color: @fg;
+}
+
+/* Drawer arrow is quieter than the modules around it */
+#custom-expand-icon {
+    color: @fg-dim;
+}
+
+#clock {
+    font-weight: bold;
+}
+
+tooltip {
+    background: @bg;
+    border: 1px solid @bg-light;
+    border-radius: 6px;
+}
+
+tooltip label {
+    color: @fg;
+}
+
+/* Indicators: only visible while active */
+#custom-screen-record.on {
+    color: @red;
+}
+
+#custom-idle-inhibitor.on {
+    color: @yellow;
+}
+
+#custom-voxtype.recording {
+    color: @red;
+}
+
+#custom-voxtype.transcribing {
+    color: @yellow;
+}
+
+#custom-voxtype.stopped {
+    color: @fg-dim;
+}
+
+#privacy-item {
+    color: @red;
+}
+
+#battery.warning:not(.charging) {
+    color: @yellow;
+}
+
+#battery.critical:not(.charging) {
+    color: @red;
+}
+
+#network.vpn {
+    color: @blue;
+}
+
+#network.disconnected {
+    background: @red-dark;
+}
