@@ -188,6 +188,7 @@ alias tksv='tmux kill-server'
 alias tkss='tmux kill-session -t'
 
 alias c="chezmoi"
+[[ -e /etc/NIXOS ]] && alias nrs="sudo nixos-rebuild switch --flake $HOME/.local/share/chezmoi/nixos"
 alias mr="mise run"
 alias run="./run"
 

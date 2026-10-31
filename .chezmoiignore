@@ -1,9 +1,5 @@
-.work
-.work/**
 handoff
-handoff/**
-.browser-profile
-.browser-profile/**
+nixos
 setup.sh
 README.md
 
