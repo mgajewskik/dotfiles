@@ -315,6 +315,7 @@
     restic
     rclone
     wireguard-tools
+    inputs.vortix.packages.${pkgs.stdenv.hostPlatform.system}.vortix
     trash-cli
     tree
     impala

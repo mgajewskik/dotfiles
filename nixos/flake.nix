@@ -15,6 +15,10 @@
       url = "github:peteonrails/voxtype/v1.1.1";
       inputs.nixpkgs.follows = "nixpkgs";
     };
+    vortix = {
+      url = "github:Harry-kp/vortix/v0.5.5";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
   };
 
   outputs =
