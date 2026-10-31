@@ -1,4 +1,4 @@
-{ lib, pkgs, ... }:
+{ inputs, lib, pkgs, ... }:
 
 {
   imports = [
@@ -330,7 +330,7 @@
     pavucontrol
     easyeffects
     udiskie
-    (voxtype.override { onnxSupport = true; })
+    inputs.voxtype.packages.${pkgs.stdenv.hostPlatform.system}.onnx
     insync
     obsidian
     bitwarden-desktop
