@@ -43,7 +43,11 @@
   "containerEnv": {
     "AGENT_BROWSER_HEADED": "true",
     // every agent-browser command uses this persistent profile, so logins survive Chrome restarts; git-ignored by my dotfiles
-    "AGENT_BROWSER_PROFILE": "${containerWorkspaceFolder}/.browser-profile"
+    "AGENT_BROWSER_PROFILE": "${containerWorkspaceFolder}/.browser-profile",
+    // crib's shells get TERM=xterm and no COLORTERM, so truecolor themes fall back to 256 colours;
+    // tmux, herdr panes and ssh set their own, so these only count in a shell straight from crib
+    "TERM": "xterm-256color",
+    "COLORTERM": "truecolor"
     // without a desktop (mini/): my dotfiles skip the Chrome for Testing install (and its system libraries) when this is set
     // "DOTFILES_NO_BROWSER": "1"
   },

@@ -21,7 +21,9 @@
   ],
   "containerEnv": {
     "AGENT_BROWSER_HEADED": "true",
-    "AGENT_BROWSER_PROFILE": "${containerWorkspaceFolder}/.browser-profile"
+    "AGENT_BROWSER_PROFILE": "${containerWorkspaceFolder}/.browser-profile",
+    "TERM": "xterm-256color",
+    "COLORTERM": "truecolor"
   },
   "mounts": [
     "type=bind,source=${localEnv:HOME}/.claude/projects/-workspaces-${localWorkspaceFolderBasename},target=/home/vscode/.claude/projects/-workspaces-${localWorkspaceFolderBasename}"
