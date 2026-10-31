@@ -32,6 +32,7 @@ videos
 .config/systemd/user/default.target.wants/syncthing.service
 .config/systemd/user/graphical-session.target.wants/mako.service
 .config/systemd/user/graphical-session.target.wants/vicinae.service
+.config/xdg-desktop-portal-wlr
 {{ end }}
 
 {{ if .remote }}

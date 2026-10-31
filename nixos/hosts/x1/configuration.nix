@@ -1,4 +1,4 @@
-{ pkgs, ... }:
+{ lib, pkgs, ... }:
 
 {
   imports = [
@@ -201,6 +201,24 @@
   programs.uwsm.enable = true;
   security.soteria.enable = true;
   programs.gpu-screen-recorder.enable = true;
+  xdg.portal.wlr.settings.screencast = {
+    chooser_type = "simple";
+    chooser_cmd = "${pkgs.slurp}/bin/slurp -f 'Monitor: %o' -or";
+  };
+
+  programs.dconf.profiles.user.databases = [
+    {
+      settings."org/gnome/desktop/interface" = {
+        color-scheme = "prefer-dark";
+        gtk-theme = "Arc-Dark";
+        icon-theme = "Papirus-Dark";
+        cursor-theme = "phinger-cursors-light";
+        cursor-size = lib.gvariant.mkInt32 24;
+        font-name = "JetBrainsMono Nerd Font 10";
+        monospace-font-name = "JetBrainsMono Nerd Font 10";
+      };
+    }
+  ];
 
   systemd.packages = [
     pkgs.syncthing
@@ -216,6 +234,9 @@
     after = [ "graphical-session.target" ];
     partOf = [ "graphical-session.target" ];
     wantedBy = [ "graphical-session.target" ];
+    # NixOS pins every generated unit's PATH to coreutils and friends. vicinae starts apps by the bare names in their
+    # desktop entries (firefox, bitwarden, claude-desktop), so it needs the session PATH from environment.d instead.
+    environment.PATH = lib.mkForce null;
     serviceConfig = {
       ExecStart = "${pkgs.vicinae}/bin/vicinae server --replace";
       ExecReload = "${pkgs.coreutils}/bin/kill -HUP $MAINPID";
@@ -230,8 +251,10 @@
     noto-fonts-cjk-sans
     noto-fonts-color-emoji
     jetbrains-mono
+    nerd-fonts.jetbrains-mono
     nerd-fonts.symbols-only
   ];
+  fonts.fontconfig.defaultFonts.monospace = [ "JetBrainsMono Nerd Font" ];
 
   environment.systemPackages = with pkgs; [
     gcc
