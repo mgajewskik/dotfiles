@@ -8,6 +8,7 @@ README.md
 .zprofile
 .config/uwsm
 .config/sway
+.config/hypr
 .config/waybar
 .config/mako
 .config/wlogout

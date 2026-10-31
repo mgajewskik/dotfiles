@@ -7,7 +7,7 @@ After=graphical-session.target
 [Service]
 Type=simple
 ExecCondition=/bin/sh -c 'case "$XDG_CURRENT_DESKTOP" in sway|sway:*) swaymsg -t get_version >/dev/null 2>&1 ;; *) exit 1 ;; esac'
-ExecStart={{ .systemPrefix }}/bin/hypridle --config %h/.config/sway/hypridle.conf
+ExecStart={{ .systemPrefix }}/bin/hypridle
 Restart=on-failure
 RestartSec=3
 
