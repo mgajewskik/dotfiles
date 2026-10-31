@@ -322,6 +322,8 @@
     man-pages
     yubikey-manager
     jq
+    bubblewrap
+    socat
     syncthing
 
     waybar
