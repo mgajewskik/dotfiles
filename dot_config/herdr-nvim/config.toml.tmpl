@@ -1,0 +1,4 @@
+[sidebar]
+# A herdr server started over ssh (herdr --remote) inherits sshd's bare PATH, where a bare "nvim" is not found and
+# prefix+e closes at once. The mise shim resolves nvim and gives it every mise tool. Keep it while nvim comes from mise.
+nvim_bin = {{ joinPath .chezmoi.homeDir ".local/share/mise/shims/nvim" | quote }}
