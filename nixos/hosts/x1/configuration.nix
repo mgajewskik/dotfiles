@@ -210,6 +210,13 @@
   };
   programs.uwsm.enable = true;
   security.soteria.enable = true;
+  # soteria needs XDG_SESSION_ID, which uwsm deliberately keeps out of the systemd user environment. Take the session
+  # logind elected as the user's display instead.
+  systemd.user.services.polkit-soteria.serviceConfig.ExecStart = lib.mkForce (
+    pkgs.writeShellScript "soteria-in-display-session" ''
+      XDG_SESSION_ID=$(loginctl show-user "$UID" --property=Display --value) exec ${lib.getExe pkgs.soteria}
+    ''
+  );
   programs.gpu-screen-recorder.enable = true;
   xdg.portal.wlr.settings.screencast = {
     chooser_type = "simple";
