@@ -1,6 +1,6 @@
 {
     "label" : "lock",
-    "action" : "swaylock -i ~/.config/sway/wallpapers/simple_arch.png -s fill",
+    "action" : "swaylock",
     "text" : "Lock",
     "keybind" : "l"
 }

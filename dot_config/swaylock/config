@@ -1,0 +1,5 @@
+# Same wallpaper as swaybg: native-size renders per output, the 3840x1600 one everywhere else.
+image=~/.config/sway/wallpapers/nixos-kanagawa-3840x1600.png
+image=DP-2:~/.config/sway/wallpapers/nixos-kanagawa-3840x1600.png
+image=eDP-1:~/.config/sway/wallpapers/nixos-kanagawa-1920x1200.png
+scaling=fill

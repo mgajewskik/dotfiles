@@ -5,9 +5,9 @@ PartOf=graphical-session.target
 
 [Service]
 Type=simple
-# Other outputs fill from the 8K image; DP-2 (3840x1600) and eDP-1 (1920x1200) use native-size crops of it
-# that keep the wave crest and drop the watermark.
-ExecStart={{ .systemPrefix }}/bin/swaybg -o * -i %h/.config/sway/wallpapers/great-wave-of-kanagawa-7680x4320.jpg -m fill -o DP-2 -i %h/.config/sway/wallpapers/great-wave-of-kanagawa-8k-3840x1600.jpg -m fill -o eDP-1 -i %h/.config/sway/wallpapers/great-wave-of-kanagawa-8k-1920x1200.jpg -m fill
+# DP-2 (3840x1600) and eDP-1 (1920x1200) get native-size renders; other outputs fill from the 3840x1600 one.
+# Keep in sync with ~/.config/swaylock/config. nixos-{nord,gruvbox-large}-* are kept as alternatives.
+ExecStart={{ .systemPrefix }}/bin/swaybg -o * -i %h/.config/sway/wallpapers/nixos-kanagawa-3840x1600.png -m fill -o DP-2 -i %h/.config/sway/wallpapers/nixos-kanagawa-3840x1600.png -m fill -o eDP-1 -i %h/.config/sway/wallpapers/nixos-kanagawa-1920x1200.png -m fill
 Restart=on-failure
 RestartSec=3
 
