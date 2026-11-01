@@ -1,13 +1,14 @@
 [Unit]
-Description=Hypridle for Sway sessions
-Documentation=https://wiki.hypr.land/0.45.0/Hypr-Ecosystem/hypridle/
+Description=Swayidle for Sway sessions
+Documentation=man:swayidle(1)
 PartOf=graphical-session.target
 After=graphical-session.target
 
 [Service]
 Type=simple
 ExecCondition=/bin/sh -c 'case "$XDG_CURRENT_DESKTOP" in sway|sway:*) swaymsg -t get_version >/dev/null 2>&1 ;; *) exit 1 ;; esac'
-ExecStart={{ .systemPrefix }}/bin/hypridle
+# Events live in ~/.config/swayidle/config. -w lets the lock finish before the system sleeps.
+ExecStart={{ .systemPrefix }}/bin/swayidle -w
 Restart=on-failure
 RestartSec=3
 

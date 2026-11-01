@@ -9,7 +9,7 @@ README.md
 .config/uwsm
 .config/sway
 .config/swaylock
-.config/hypr
+.config/swayidle
 .config/waybar
 .config/mako
 .config/wlogout

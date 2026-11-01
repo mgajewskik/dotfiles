@@ -340,7 +340,6 @@
     wtype
     wev
     wlogout
-    hypridle
     nwg-displays
     nwg-look
     papirus-icon-theme

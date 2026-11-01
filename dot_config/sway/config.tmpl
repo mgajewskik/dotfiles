@@ -84,7 +84,7 @@ bindsym XF86AudioMute exec wpctl set-mute @DEFAULT_AUDIO_SINK@ toggle
 bindsym XF86AudioMicMute exec wpctl set-mute @DEFAULT_AUDIO_SOURCE@ toggle
 bindsym XF86MonBrightnessUp exec brightnessctl set 10%+
 bindsym XF86MonBrightnessDown exec brightnessctl set 10%-
-bindsym XF86Display exec sh -c 'if systemctl --user is-active --quiet hypridle-sway.service; then systemctl --user stop hypridle-sway.service; else systemctl --user start hypridle-sway.service; fi; pkill -RTMIN+9 waybar'
+bindsym XF86Display exec sh -c 'if systemctl --user is-active --quiet swayidle.service; then systemctl --user stop swayidle.service; else systemctl --user start swayidle.service; fi; pkill -RTMIN+9 waybar'
 
 bindsym $mod+f fullscreen toggle
 bindsym $mod+Shift+f floating toggle

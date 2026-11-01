@@ -1,0 +1,6 @@
+timeout 300 'pidof swaylock || swaylock -f'
+timeout 360 'swaymsg "output * power off"' resume 'swaymsg "output * power on"'
+timeout 1800 'systemctl suspend'
+before-sleep 'pidof swaylock || swaylock -f'
+after-resume 'swaymsg "output * power on"'
+lock 'pidof swaylock || swaylock -f'

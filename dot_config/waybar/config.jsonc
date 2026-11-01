@@ -136,13 +136,13 @@
         "on-click-right": "~/.config/sway/screen-record.sh region; pkill -RTMIN+8 waybar"
     },
 
-    // Shown only while hypridle-sway is stopped (XF86Display toggles it).
+    // Shown only while swayidle is stopped (XF86Display toggles it).
     "custom/idle-inhibitor": {
         "return-type": "json",
-        "exec": "if systemctl --user is-active --quiet hypridle-sway.service; then echo '{\"text\": \"\"}'; else echo '{\"text\": \"󰅶\", \"tooltip\": \"hypridle-sway stopped (click to start)\", \"class\": \"on\"}'; fi",
+        "exec": "if systemctl --user is-active --quiet swayidle.service; then echo '{\"text\": \"\"}'; else echo '{\"text\": \"󰅶\", \"tooltip\": \"swayidle stopped (click to start)\", \"class\": \"on\"}'; fi",
         "interval": 30,
         "signal": 9,
-        "on-click": "sh -c 'if systemctl --user is-active --quiet hypridle-sway.service; then systemctl --user stop hypridle-sway.service; else systemctl --user start hypridle-sway.service; fi; pkill -RTMIN+9 waybar'"
+        "on-click": "sh -c 'if systemctl --user is-active --quiet swayidle.service; then systemctl --user stop swayidle.service; else systemctl --user start swayidle.service; fi; pkill -RTMIN+9 waybar'"
     },
 
     // Drawer buttons for starting what the indicators above show.
@@ -155,8 +155,8 @@
 
     "custom/idle-toggle": {
         "format": "󰾪",
-        "tooltip-format": "Toggle hypridle-sway",
-        "on-click": "sh -c 'if systemctl --user is-active --quiet hypridle-sway.service; then systemctl --user stop hypridle-sway.service; else systemctl --user start hypridle-sway.service; fi; pkill -RTMIN+9 waybar'"
+        "tooltip-format": "Toggle swayidle",
+        "on-click": "sh -c 'if systemctl --user is-active --quiet swayidle.service; then systemctl --user stop swayidle.service; else systemctl --user start swayidle.service; fi; pkill -RTMIN+9 waybar'"
     },
 
     "custom/move-workspaces-dp2": {
