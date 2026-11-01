@@ -3,3 +3,31 @@ image=~/.config/sway/wallpapers/nixos-kanagawa-3840x1600.png
 image=DP-2:~/.config/sway/wallpapers/nixos-kanagawa-3840x1600.png
 image=eDP-1:~/.config/sway/wallpapers/nixos-kanagawa-1920x1200.png
 scaling=fill
+color=1F1F28
+
+# Kanagawa indicator, matching waybar and wlogout: yellow clear, blue verify, red wrong, violet caps lock.
+font=JetBrainsMono Nerd Font
+line-uses-inside
+separator-color=00000000
+inside-color=1F1F28CC
+inside-clear-color=1F1F28CC
+inside-ver-color=1F1F28CC
+inside-wrong-color=1F1F28CC
+inside-caps-lock-color=1F1F28CC
+ring-color=363646
+ring-clear-color=E6C384
+ring-ver-color=7E9CD8
+ring-wrong-color=E46876
+ring-caps-lock-color=957FB8
+key-hl-color=98BB6C
+bs-hl-color=E46876
+caps-lock-key-hl-color=98BB6C
+caps-lock-bs-hl-color=E46876
+text-color=DCD7BA
+text-clear-color=E6C384
+text-ver-color=7E9CD8
+text-wrong-color=E46876
+text-caps-lock-color=957FB8
+layout-bg-color=1F1F28CC
+layout-border-color=363646
+layout-text-color=DCD7BA
