@@ -101,7 +101,7 @@
     "custom/exit": {
         "format": "⏻",
         "tooltip-format": "Powermenu",
-        "on-click": "wlogout -b 4",
+        "on-click": "wlogout -b 3 -T 300 -B 300 -L 560 -R 560 -c 24 -r 24",
         "tooltip": false
     },
 

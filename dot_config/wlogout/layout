@@ -5,12 +5,6 @@
     "keybind" : "l"
 }
 {
-    "label" : "hibernate",
-    "action" : "systemctl hibernate || loginctl hibernate",
-    "text" : "Hibernate",
-    "keybind" : "h"
-}
-{
     "label" : "logout",
     "action" : "uwsm stop",
     "text" : "Exit",
@@ -21,6 +15,12 @@
     "action" : "systemctl suspend",
     "text" : "Suspend",
     "keybind" : "s"
+}
+{
+    "label" : "hibernate",
+    "action" : "systemctl hibernate || loginctl hibernate",
+    "text" : "Hibernate",
+    "keybind" : "h"
 }
 {
     "label" : "reboot",
