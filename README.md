@@ -133,3 +133,28 @@ When it stops working, I check from the bottom up; the first failing row is the 
 | ssh gets in             | `ssh -o BatchMode=yes -o StrictHostKeyChecking=yes crib-<id> true` | `ssh -v crib-<id> true`; sshd's own errors: `-e` after `sshd -i` in `~/.ssh/config.d/crib` |
 | herdr runs inside       | `crib run -- herdr status server`                                  | `crib run -- tail -50 /tmp/herdr-server.log`                                               |
 | my host's herdr sees it | `herdr machine status myapp --json`                                | `herdr machine reconnect myapp`                                                            |
+
+### AWS credentials in a container
+
+A container gets AWS access only through a `devcontainer` role, never my IAM user's keys. Once per account, I
+create that role with its `devcontainer-guardrails` permissions boundary from
+[`.devcontainer/devcontainer-role.cfn.yaml`](.devcontainer/devcontainer-role.cfn.yaml), whose first lines are the
+deploy command. The boundary allows admin, minus IAM users and groups, identity providers, Organizations and
+account settings. Roles it creates must carry the same boundary, so every `aws_iam_role` sets
+`permissions_boundary`. What the boundary blocks, I run from the host.
+
+For each project, I set the role in its mise env and point the container at the credentials file:
+
+```toml
+[env]
+DEVCONTAINER_AWS_ROLE_ARN = "arn:aws:iam::<account>:role/devcontainer"
+```
+
+```jsonc
+"containerEnv": { "AWS_CONFIG_FILE": "${containerWorkspaceFolder}/.devcontainer/aws/config" }
+```
+
+Then, on the host in the project root, `mise run aws-devcontainer` assumes the role with my `default` profile
+(`DEVCONTAINER_AWS_SOURCE_PROFILE` picks another) for 12 hours (`DEVCONTAINER_AWS_DURATION`, in seconds) and writes
+`.devcontainer/aws/`, which my global gitignore excludes. When the credentials expire, I run it again; the
+container picks them up without a restart.

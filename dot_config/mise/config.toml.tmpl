@@ -26,6 +26,7 @@ neovim = "latest"
 tree-sitter = "latest"
 k9s = "latest"
 kubectl = "latest"
+awscli = "latest"
 uv = "latest"
 ty = "latest"
 "github:dalance/procs" = "latest"
@@ -44,3 +45,30 @@ claude = "latest"
 "github:badlogic/pi-mono" = "latest"
 "github:vercel-labs/agent-browser" = "latest"
 "github:rtk-ai/rtk" = "latest"
+{{- if not .container }}
+
+[tasks.aws-devcontainer]
+description = "Write devcontainer role credentials for this project into .devcontainer/aws"
+dir = "{{ "{{cwd}}" }}"
+shell = "bash -c"
+quiet = true
+run = '''
+set -euo pipefail
+: "${DEVCONTAINER_AWS_ROLE_ARN:?set it in the project mise env}"
+[ -d .devcontainer ] || { echo "run from the project root: no .devcontainer here" >&2; exit 1; }
+umask 077
+credentials_dir=.devcontainer/aws
+mkdir -p "$credentials_dir"
+trap 'rm -f "$credentials_dir/credentials.json.tmp"' EXIT
+aws sts assume-role \
+  --profile "${DEVCONTAINER_AWS_SOURCE_PROFILE:-default}" \
+  --role-arn "$DEVCONTAINER_AWS_ROLE_ARN" \
+  --role-session-name "devcontainer-$(basename "$PWD")" \
+  --duration-seconds "${DEVCONTAINER_AWS_DURATION:-43200}" \
+  | jq '.Credentials | {Version: 1, AccessKeyId, SecretAccessKey, SessionToken, Expiration}' \
+  > "$credentials_dir/credentials.json.tmp"
+mv "$credentials_dir/credentials.json.tmp" "$credentials_dir/credentials.json"
+printf '[default]\ncredential_process = cat /workspaces/%s/%s/credentials.json\n' "$(basename "$PWD")" "$credentials_dir" > "$credentials_dir/config"
+echo "wrote $credentials_dir, expires $(jq -r .Expiration "$credentials_dir/credentials.json")"
+'''
+{{- end }}

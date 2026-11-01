@@ -1,0 +1,133 @@
+# aws cloudformation deploy \
+#   --profile <admin profile> --region <region> \
+#   --stack-name devcontainer-role \
+#   --template-file .devcontainer/devcontainer-role.cfn.yaml \
+#   --parameter-overrides SourceUserArn=arn:aws:iam::<account>:user/<name> \
+#   --capabilities CAPABILITY_NAMED_IAM
+#
+# aws cloudformation describe-stacks --profile <admin profile> --region <region> \
+#   --stack-name devcontainer-role --query 'Stacks[0].Outputs'
+
+AWSTemplateFormatVersion: "2010-09-09"
+Description: Devcontainer role - admin minus IAM users, federation, organization and account settings
+
+Parameters:
+  SourceUserArn:
+    Type: String
+    AllowedPattern: arn:aws[a-z-]*:iam::\d{12}:user/.+
+    Description: IAM user (in this or another account) whose keys assume the devcontainer role
+
+Resources:
+  GuardrailsPolicy:
+    Type: AWS::IAM::ManagedPolicy
+    Properties:
+      ManagedPolicyName: devcontainer-guardrails
+      Description: Permissions boundary for the devcontainer role and every role it creates
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Sid: AllowEverythingNotDeniedBelow
+            Effect: Allow
+            Action: "*"
+            Resource: "*"
+
+          - Sid: DenyOrganizationAndAccountSettings
+            Effect: Deny
+            Action:
+              - organizations:*
+              - account:*
+              - iam:CreateAccountAlias
+              - iam:DeleteAccountAlias
+              - iam:UpdateAccountPasswordPolicy
+              - iam:DeleteAccountPasswordPolicy
+              - iam:SetSecurityTokenServicePreferences
+            Resource: "*"
+
+          - Sid: DenyUsersAndGroups
+            Effect: Deny
+            NotAction:
+              - iam:Get*
+              - iam:List*
+            Resource:
+              - !Sub arn:${AWS::Partition}:iam::${AWS::AccountId}:user/*
+              - !Sub arn:${AWS::Partition}:iam::${AWS::AccountId}:group/*
+
+          - Sid: DenyFederationAndOtherLongLivedCredentials
+            Effect: Deny
+            Action:
+              - iam:CreateOpenIDConnectProvider
+              - iam:UpdateOpenIDConnectProviderThumbprint
+              - iam:AddClientIDToOpenIDConnectProvider
+              - iam:CreateSAMLProvider
+              - iam:UpdateSAMLProvider
+              - rolesanywhere:Create*
+              - rolesanywhere:Update*
+              - rolesanywhere:Put*
+              - rolesanywhere:Enable*
+              - sso:*
+              - sso-directory:*
+              - identitystore:*
+            Resource: "*"
+
+          - Sid: DenyNewRolesWithoutThisBoundary
+            Effect: Deny
+            Action: iam:CreateRole
+            Resource: "*"
+            Condition:
+              StringNotEquals:
+                iam:PermissionsBoundary: !Sub arn:${AWS::Partition}:iam::${AWS::AccountId}:policy/devcontainer-guardrails
+
+          - Sid: DenyChangingRolesWithoutThisBoundary
+            Effect: Deny
+            Action:
+              - iam:AttachRolePolicy
+              - iam:DetachRolePolicy
+              - iam:PutRolePolicy
+              - iam:DeleteRolePolicy
+              - iam:UpdateAssumeRolePolicy
+              - iam:UpdateRole
+              - iam:DeleteRole
+            Resource: "*"
+            Condition:
+              StringNotEquals:
+                iam:PermissionsBoundary: !Sub arn:${AWS::Partition}:iam::${AWS::AccountId}:policy/devcontainer-guardrails
+
+          - Sid: DenyChangingBoundariesOfExistingRoles
+            Effect: Deny
+            Action:
+              - iam:PutRolePermissionsBoundary
+              - iam:DeleteRolePermissionsBoundary
+            Resource: "*"
+
+          - Sid: DenyChangingTheGuardrailsAndTheDevcontainerRole
+            Effect: Deny
+            NotAction:
+              - iam:Get*
+              - iam:List*
+            Resource:
+              - !Sub arn:${AWS::Partition}:iam::${AWS::AccountId}:policy/devcontainer-guardrails
+              - !Sub arn:${AWS::Partition}:iam::${AWS::AccountId}:role/devcontainer
+
+  DevcontainerRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: devcontainer
+      Description: Assumed from the host for dev containers; limited by devcontainer-guardrails
+      MaxSessionDuration: 43200
+      ManagedPolicyArns:
+        - !Sub arn:${AWS::Partition}:iam::aws:policy/AdministratorAccess
+      PermissionsBoundary: !Ref GuardrailsPolicy
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Action:
+              - sts:AssumeRole
+            Principal:
+              AWS: !Ref SourceUserArn
+
+Outputs:
+  RoleArn:
+    Value: !GetAtt DevcontainerRole.Arn
+  BoundaryArn:
+    Value: !Ref GuardrailsPolicy
