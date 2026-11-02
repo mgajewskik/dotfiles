@@ -6,11 +6,6 @@
     ./disko.nix
   ];
 
-  system.autoUpgrade = {
-    enable = true;
-    dates = "weekly";
-  };
-
   nix.settings = {
     experimental-features = [
       "nix-command"
