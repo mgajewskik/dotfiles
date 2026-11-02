@@ -189,6 +189,12 @@ alias tkss='tmux kill-session -t'
 
 alias c="chezmoi"
 [[ -e /etc/NIXOS ]] && alias nrs="sudo nixos-rebuild switch --flake $HOME/.local/share/chezmoi/nixos"
+if [[ -e /etc/NIXOS ]]; then
+  needs-reboot() {
+    diff <(readlink /run/booted-system/{kernel,initrd,kernel-modules}) \
+         <(readlink /run/current-system/{kernel,initrd,kernel-modules}) && echo "no reboot needed"
+  }
+fi
 alias mr="mise run"
 alias run="./run"
 
