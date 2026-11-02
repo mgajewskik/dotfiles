@@ -10,6 +10,7 @@
     }
   },
   "runArgs": [
+    "--pids-limit=8192",
     "--cap-add=NET_RAW",
     "--sysctl=net.ipv4.ping_group_range=1000 1000"
   ],

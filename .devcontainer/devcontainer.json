@@ -33,6 +33,9 @@
     // "--memory=8g",
     // "--cpus=4",
     "--shm-size=1g",
+    // podman caps a container at 2048 pids, threads included; LSPs, builds and Chrome together reach that on 16 cores.
+    // Still finite, so a fork loop stops here rather than at the host's limit
+    "--pids-limit=8192",
     // tcpdump needs raw sockets; it only sees this container's network
     "--cap-add=NET_RAW",
     // ping as vscode (gid 1000): Debian 13's ping has no capability and podman allows ICMP sockets to no group;
