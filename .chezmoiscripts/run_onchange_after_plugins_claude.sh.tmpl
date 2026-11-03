@@ -37,6 +37,16 @@ fi
 claude mcp remove -s user context7 >/dev/null 2>&1
 claude mcp add -s user --transport http context7 https://mcp.context7.com/mcp || failed+=("mcp context7")
 
+# PR status footer off: it polls gh in the background, and where gh is not logged in (dev containers) that leaves
+# orphaned gh processes. The key lives in ~/.claude.json, which settings.json cannot set.
+config="$HOME/.claude.json"
+if (umask 077 && "$MISE" exec jq -- jq '.prStatusFooterEnabled = false' "$config" >"$config.tmp"); then
+  mv -- "$config.tmp" "$config"
+else
+  rm -f -- "$config.tmp"
+  failed+=("PR status footer")
+fi
+
 if ((${#failed[@]})); then
   echo "Claude setup failed for: ${failed[*]}" >&2
   echo "retry with: chezmoi state delete --bucket=entryState --key={{ joinPath .chezmoi.homeDir ".chezmoiscripts/plugins_claude.sh" }} && chezmoi apply" >&2
