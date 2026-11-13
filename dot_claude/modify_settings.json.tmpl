@@ -2,8 +2,8 @@
 # merges .chezmoitemplates/claude/settings.json into this machine's ~/.claude/settings.json: "owned" keys replace
 # the machine's, "defaults" fill in only what is missing, and sandbox allowWrite paths the machine added are kept.
 # jq keeps the key order of the current file; keys it lacks follow in the template's order.
-# jq has to exist before chezmoi applies this, which runs before mise installs its tools: post-create.sh installs it
-# in the container.
+# jq has to exist before chezmoi applies this, which runs before mise installs its tools: the default/ and mini/
+# containers install it in postCreateCommand, and setup.sh installs it with the nix tools.
 
 set -euo pipefail
 

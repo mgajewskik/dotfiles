@@ -4,7 +4,4 @@
 
 set -euo pipefail
 
-# fallback: where .chezmoiexternals/mise.toml.tmpl puts it
-MISE="{{ if $m := lookPath "mise" }}{{ $m }}{{ else }}{{ joinPath .chezmoi.homeDir ".local/bin/mise" }}{{ end }}"
-
-"$MISE" exec yazi -- ya pkg install
+{{ template "tool-exec" . }}ya pkg install

@@ -5,13 +5,13 @@ set -euo pipefail
 
 sudo apt-get update -qq
 # file: yazi previews; gnupg: setup-gpg.sh; build-essential: nvim-treesitter compiles its parsers with cc;
-# jq: dot_claude/modify_settings.json.tmpl runs before mise installs its jq; socat: vnc-relay in devcontainer.json;
+# socat: vnc-relay in devenv.nix;
 # openssh-server: sshd for my host's herdr to connect to this container as a machine; my ssh config starts it
 # per connection through podman exec, so no daemon runs;
 # the rest: network debugging (dig, ping, nc, traceroute, tcpdump, mtr, nmap, iperf3, whois)
 # noninteractive: iperf3 would otherwise ask whether to start its daemon
 sudo DEBIAN_FRONTEND=noninteractive apt-get install -y -qq --no-install-recommends \
-    file gnupg build-essential jq socat openssh-server \
+    file gnupg build-essential socat openssh-server \
     bind9-dnsutils iputils-ping netcat-openbsd traceroute tcpdump mtr-tiny nmap iperf3 whois
 
 ./setup.sh

@@ -5,6 +5,15 @@ if command -v zsh >/dev/null && sudo -n true 2>/dev/null; then
     sudo chsh -s "$(command -v zsh)" "$(id -un)" || echo "setup.sh: could not make zsh the login shell" >&2
 fi
 
+if command -v nix >/dev/null; then
+    if [ -x "$HOME/.nix-profile/bin/chezmoi" ]; then
+        nix profile upgrade --all
+    else
+        nix profile add "path:$PWD/.devcontainer/tools"
+    fi
+    PATH="$HOME/.nix-profile/bin:$PATH"
+fi
+
 if command -v chezmoi >/dev/null; then
     chezmoi init --apply --source "$PWD"
     exit 0

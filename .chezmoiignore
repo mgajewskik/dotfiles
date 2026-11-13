@@ -2,6 +2,11 @@ handoff
 nixos
 setup.sh
 README.md
+devenv.nix
+devenv.yaml
+devenv.lock
+devenv.local.nix
+devenv.local.yaml
 
 {{ if or .remote (ne .chezmoi.os "linux") }}
 .profile
@@ -47,4 +52,8 @@ videos
 {{ if .container }}
 .config/crib
 .ssh
+{{ end }}
+
+{{ if .nixTools }}
+.config/mise
 {{ end }}

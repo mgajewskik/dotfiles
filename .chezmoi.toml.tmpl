@@ -3,6 +3,7 @@
 {{- $container := or (env "CODESPACES" | not | not) (env "REMOTE_CONTAINERS" | not | not) (env "KUBERNETES_SERVICE_HOST" | not | not) (env "container" | not | not) (stat "/run/.containerenv" | not | not) (stat "/.dockerenv" | not | not) -}}
 {{- $remote := or $container (env "SSH_CONNECTION" | not | not) -}}
 {{- $nixos := eq (dig "osRelease" "id" "" .chezmoi) "nixos" -}}
+{{- $nixTools := and $container (lookPath "nix" | not | not) -}}
 
 sourceDir = {{ .chezmoi.sourceDir | quote }}
 
@@ -10,4 +11,5 @@ sourceDir = {{ .chezmoi.sourceDir | quote }}
 remote = {{ $remote }}
 container = {{ $container }}
 nixos = {{ $nixos }}
+nixTools = {{ $nixTools }}
 systemPrefix = {{ if $nixos }}"/run/current-system/sw"{{ else }}"/usr"{{ end }}

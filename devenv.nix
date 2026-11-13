@@ -1,0 +1,132 @@
+{ pkgs, ... }:
+
+let
+  startNixDaemon = "setsid -f /nix-entrypoint.sh true >/tmp/nix-entrypoint.log 2>&1; timeout 60 sh -c 'until nix store info >/dev/null 2>&1; do sleep 0.2; done'";
+in
+{
+  packages = [
+    pkgs.shellcheck
+    pkgs.nixfmt
+  ];
+
+  enterTest = ''
+    shellcheck --version
+    nixfmt --version
+  '';
+
+  # Reference for my dev containers: every option I use, explained. This one tests this repo.
+  # devenv writes it to .devcontainer/devcontainer.json on `devenv shell`; edit it here, not there.
+  # default/ (desktop and browser) and mini/ (neither) are the same setup without comments, ready to use:
+  # copy one's devcontainer.json to <project>/.devcontainer/ and default/.cribrc to <project>/
+  # Before the first `crib up`, run `claude-path` in the project root: it creates the host folder the Claude mount needs.
+  devcontainer = {
+    enable = true;
+    settings = {
+      name = "dotfiles-test";
+      # image: devenv's default, ghcr.io/cachix/devenv/devcontainer (Microsoft's Ubuntu base with nix and devenv)
+      # The image's ENTRYPOINT starts the nix daemon, but crib 0.10 replaces it with the entrypoint of a feature that
+      # declares one (desktop-lite) and, with overrideCommand false, the container exits at once. So crib keeps it
+      # alive and the daemon starts in onCreateCommand and postStartCommand; drop both once crib chains the image's own.
+      overrideCommand = true;
+      onCreateCommand = {
+        nix-daemon = startNixDaemon;
+        # trusts the workspace for my zshrc's devenv hook, which then opens every shell here in the devenv shell;
+        # the trust list lives in the home folder, so each new container starts without it
+        devenv-allow = "devenv allow";
+      };
+      remoteUser = "vscode";
+      features = {
+        # the base image installs zsh but keeps bash as the login shell
+        # username is explicit: crib leaves _REMOTE_USER empty, so "automatic" resolves to "" and the install fails
+        "ghcr.io/devcontainers/features/common-utils:2.7.1" = {
+          username = "vscode";
+          configureZshAsDefaultShell = true;
+          installOhMyZsh = false;
+          upgradePackages = true;
+        };
+        # a docker daemon inside the container
+        # "ghcr.io/devcontainers/features/docker-in-docker:2" = { };
+        # a desktop on DISPLAY=:1, served by noVNC at http://localhost:6080 (password: vscode)
+        "ghcr.io/devcontainers/features/desktop-lite:1.2.10" = { };
+      };
+      forwardPorts = [
+        # "127.0.0.1:8080:8080"
+        "127.0.0.1:6080:6080"
+        # TigerVNC for a native viewer, which syncs the clipboard: vncviewer 127.0.0.1:5901 (password: vscode)
+        # vnc-relay: points at socat on 5902; without the relay, forward "127.0.0.1:5901:5901"
+        "127.0.0.1:5901:5902"
+      ];
+      runArgs = [
+        # "--memory=8g"
+        # "--cpus=4"
+        "--shm-size=1g"
+        # podman caps a container at 2048 pids, threads included; LSPs, builds and Chrome together reach that on 16 cores.
+        # Still finite, so a fork loop stops here rather than at the host's limit
+        "--pids-limit=8192"
+        # tcpdump needs raw sockets; it only sees this container's network
+        "--cap-add=NET_RAW"
+        # ping as vscode (gid 1000): Debian 13's ping has no capability and podman allows ICMP sockets to no group;
+        # only vscode's gid works: rootless podman maps 65537 gids, and the range is checked in host gids
+        "--sysctl=net.ipv4.ping_group_range=1000 1000"
+      ];
+      # agent-browser opens Chrome for Testing (installed by my dotfiles) as a window on that desktop
+      containerEnv = {
+        AGENT_BROWSER_HEADED = "true";
+        # every agent-browser command uses this persistent profile, so logins survive Chrome restarts; git-ignored by my dotfiles
+        AGENT_BROWSER_PROFILE = "\${containerWorkspaceFolder}/.browser-profile";
+        # crib's shells get TERM=xterm and no COLORTERM, so truecolor themes fall back to 256 colours;
+        # tmux, herdr panes and ssh set their own, so these only count in a shell straight from crib
+        TERM = "xterm-256color";
+        COLORTERM = "truecolor";
+        # without a desktop (mini/): my dotfiles skip the Chrome for Testing install (and its system libraries) when this is set
+        # DOTFILES_NO_BROWSER = "1";
+        # AWS role credentials that `mise run aws-devcontainer` writes on my host (role and source profile from the
+        # project's mise env); git-ignored by my dotfiles
+        # AWS_CONFIG_FILE = "\${containerWorkspaceFolder}/.devcontainer/aws/config";
+      };
+      # from my host's environment when crib starts the container (empty if unset there); `crib restart` picks up a new value.
+      # Unlike containerEnv, crib passes these only to its shells and commands, so the token stays out of `podman inspect`.
+      # remoteEnv = {
+      #   EXAMPLE_API_TOKEN = "\${localEnv:EXAMPLE_API_TOKEN}";
+      # };
+      # Claude keys its memory by path with non-alphanumerics as "-": a project folder named with anything else
+      # (my_app, app.v2) needs the key from `claude-path` in place of -workspaces-${localWorkspaceFolderBasename}
+      mounts = [
+        # a host folder, read-only
+        # "type=bind,source=\${localEnv:HOME}/data,target=/data,readonly"
+        # gpg through my host's agent; the socket exists only after `gpg-connect-agent /bye` on the host
+        # "type=bind,source=\${localEnv:XDG_RUNTIME_DIR}/gnupg/S.gpg-agent.extra,target=/run/host-gpg/S.gpg-agent"
+        "type=bind,source=\${localEnv:HOME}/.claude/projects/-workspaces-chezmoi-mount,target=/home/vscode/.claude/projects/-workspaces-chezmoi"
+        # one /nix for every container on this machine: podman fills the volume from the image's /nix on first use,
+        # then each tool downloads once per machine, not once per container. Because the containers share it:
+        # never garbage-collect inside one (it sees only its own roots and deletes the others' tools), and root in any
+        # of them can change what the others run, so an untrusted project gets no volume or a volume name of its own.
+        # To free space, or to get a newer image's nix and devenv (the volume hides the image's /nix): `crib down` every
+        # container using it, `podman volume rm devenv-nix`, then `crib rebuild` each, which drops crib's snapshot too
+        "type=volume,source=devenv-nix,target=/nix"
+      ];
+      # runs on my host before the container is created: the folder the Claude mount needs
+      initializeCommand = "mkdir -p \${localEnv:HOME}/.claude/projects/-workspaces-chezmoi-mount";
+      # or another host folder
+      # initializeCommand = "mkdir -p \${localEnv:HOME}/data";
+      # or write the project's AWS credentials first; `|| true` still starts the container when that fails
+      # initializeCommand = "mise run aws-devcontainer || true";
+      # runs before crib installs my dotfiles; default/ and mini/ inline the same apt install plus jq (mini without socat),
+      # and post-create.sh explains each package
+      postCreateCommand = ".devcontainer/post-create.sh";
+      # runs on every start, after my dotfiles; an object of named commands runs them in parallel
+      # ("services": "make dev-services" would be another)
+      postStartCommand = {
+        nix-daemon = startNixDaemon;
+        # TigerVNC listens on the container's loopback only; socat relays the forwarded 5902 to it.
+        # Optional: if vncviewer connects with "127.0.0.1:5901:5901" forwarded, delete every vnc-relay line and socat.
+        vnc-relay = "setsid -f socat TCP-LISTEN:5902,fork,reuseaddr TCP:127.0.0.1:5901 >/dev/null 2>&1";
+        # the herdr server my host's herdr connects to over ssh; started here so its panes get this container's
+        # environment (containerEnv, DISPLAY) rather than sshd's bare login one, and it is back after a restart.
+        # The nix profile on its PATH gives it every tool setup.sh installed, so plugins it runs find nvim (herdr-nvim's prefix+e)
+        herdr = "PATH=$HOME/.nix-profile/bin:$PATH setsid -f herdr server >/tmp/herdr-server.log 2>&1";
+      };
+      waitFor = "postCreateCommand";
+    };
+  };
+}

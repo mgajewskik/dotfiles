@@ -3,7 +3,7 @@
 chezmoi manages this directory from `dot_claude/` in my dotfiles. Edit the source there, not the files here.
 `settings.json` is built from `.chezmoitemplates/claude/settings.json` on every apply, keeping the keys Claude writes
 itself (model, theme, plugins). jq does the merge and keeps the file's key order, so it has to be on `PATH` or in
-mise before the apply; the container installs it in `post-create.sh`.
+mise before the apply; the default/ and mini/ containers install it in `postCreateCommand`, nix containers in `setup.sh`.
 
 On a host Claude runs in the Bash sandbox; in a container it runs without one, in auto mode. The Bash rules live in
 `.chezmoidata/claude.yaml`. `claude auto-mode config` prints the rules in effect.
