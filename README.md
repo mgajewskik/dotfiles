@@ -102,11 +102,8 @@ crib up && crib shell
 
 To test this repo, `crib up && crib shell` in the checkout runs `setup.sh` from the working tree, uncommitted changes
 included. Its desktop is at http://localhost:6080 (password `vscode`). After changing `setup.sh`: `crib rebuild`.
-The first time on a host, the Claude folder and gpg socket it mounts must exist:
-
-```sh
-mkdir -p ~/.claude/projects/-workspaces-chezmoi-mount && gpg-connect-agent /bye
-```
+Unlike `default/` and `mini/`, this container is generated from `devenv.nix` and gets my tools from Nix instead of
+mise: see [`.devcontainer/devenv.md`](.devcontainer/devenv.md).
 
 ### A container as a herdr machine
 
