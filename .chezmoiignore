@@ -46,5 +46,4 @@ videos
 
 {{ if .container }}
 .config/crib
-.ssh
 {{ end }}

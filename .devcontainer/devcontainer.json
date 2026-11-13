@@ -48,7 +48,7 @@
     // every agent-browser command uses this persistent profile, so logins survive Chrome restarts; git-ignored by my dotfiles
     "AGENT_BROWSER_PROFILE": "${containerWorkspaceFolder}/.browser-profile",
     // crib's shells get TERM=xterm and no COLORTERM, so truecolor themes fall back to 256 colours;
-    // tmux, herdr panes and ssh set their own, so these only count in a shell straight from crib
+    // tmux and herdr panes set their own, so these only count in a shell straight from crib
     "TERM": "xterm-256color",
     "COLORTERM": "truecolor"
     // without a desktop (mini/): my dotfiles skip the Chrome for Testing install (and its system libraries) when this is set
@@ -89,11 +89,7 @@
     // when a restart or rebuild recreates the container, the profile's lock still names the old one, so Chrome refuses
     // the profile behind an unseen "in use on another computer" dialog and every agent-browser command hangs.
     // No Chrome runs yet at start, so any lock is stale
-    "browser-unlock": "rm -f \"$AGENT_BROWSER_PROFILE\"/Singleton*",
-    // the herdr server my host's herdr connects to over ssh; started here so its panes get this container's
-    // environment (containerEnv, DISPLAY) rather than sshd's bare login one, and it is back after a restart.
-    // `mise exec --` puts every mise tool on its PATH, so plugins it runs find nvim (herdr-nvim's prefix+e)
-    "herdr": "setsid -f $HOME/.local/bin/mise exec -- herdr server >/tmp/herdr-server.log 2>&1"
+    "browser-unlock": "rm -f \"$AGENT_BROWSER_PROFILE\"/Singleton*"
   },
   "waitFor": "postCreateCommand"
 }
