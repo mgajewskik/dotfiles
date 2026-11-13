@@ -34,6 +34,7 @@
   "postStartCommand": {
     "project": "if [ -f .devcontainer/setup.sh ]; then .devcontainer/setup.sh; fi",
     "vnc-relay": "setsid -f socat TCP-LISTEN:5902,fork,reuseaddr TCP:127.0.0.1:5901 >/dev/null 2>&1",
+    "browser-unlock": "rm -f \"$AGENT_BROWSER_PROFILE\"/Singleton*",
     "herdr": "setsid -f $HOME/.local/bin/mise exec -- herdr server >/tmp/herdr-server.log 2>&1"
   },
   "waitFor": "postCreateCommand"
