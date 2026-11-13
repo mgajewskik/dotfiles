@@ -91,6 +91,10 @@ echo .cribrc >> .git/info/exclude     # in someone else's repo
 crib up && crib shell
 ```
 
+For the project's own dependencies, I add an executable `.devcontainer/setup.sh`. The container runs it from the
+project root on every start, after my dotfiles (so mise and its tools are there), which means it has to be safe to
+re-run.
+
 | I want to                                  | I run                         |
 | ------------------------------------------ | ----------------------------- |
 | start it and get a shell                   | `crib up`, then `crib shell`  |

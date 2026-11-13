@@ -80,6 +80,9 @@
   // runs on every start, after my dotfiles; an object of named commands runs them in parallel
   // ("services": "make dev-services" would be another)
   "postStartCommand": {
+    // the project's own dependencies; here, not in postCreateCommand, because crib installs my dotfiles (and with them
+    // mise) after postCreateCommand. Runs on every start, so setup.sh has to be safe to re-run
+    "project": "if [ -f .devcontainer/setup.sh ]; then .devcontainer/setup.sh; fi",
     // TigerVNC listens on the container's loopback only; socat relays the forwarded 5902 to it.
     // Optional: if vncviewer connects with "127.0.0.1:5901:5901" forwarded, delete every vnc-relay line and socat.
     "vnc-relay": "setsid -f socat TCP-LISTEN:5902,fork,reuseaddr TCP:127.0.0.1:5901 >/dev/null 2>&1",
