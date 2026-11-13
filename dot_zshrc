@@ -64,6 +64,11 @@ if command -v zoxide > /dev/null ; then
   eval "$(zoxide init zsh --cmd cd)"
 fi
 
+# cd into a project trusted with `devenv allow` starts its devenv shell, cd out exits it
+if command -v devenv > /dev/null ; then
+  eval "$(devenv hook zsh)"
+fi
+
 if command -v crib > /dev/null ; then
   source <(crib completion zsh)
 
