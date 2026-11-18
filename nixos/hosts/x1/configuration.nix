@@ -30,6 +30,11 @@
   boot.blacklistedKernelModules = [
     "pcspkr"
     "snd_pcsp"
+    # network protocols nothing here uses; any local user, agentbox containers included, could load them by opening a
+    # socket, which exposes their rarely audited code
+    "sctp"
+    "rds"
+    "tipc"
   ];
   boot.resumeDevice = "/dev/mapper/root";
   boot.kernelParams = [ "resume_offset=533760" ];
