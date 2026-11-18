@@ -67,6 +67,9 @@ fi
 # cd into a project trusted with `devenv allow` starts its devenv shell, cd out exits it
 if command -v devenv > /dev/null ; then
   eval "$(devenv hook zsh)"
+  # devenv prepends (devenv) to the prompt after this file runs; starship's nix_shell logo already shows it
+  _strip_devenv_prompt() { PROMPT=${PROMPT#"(devenv) "} }
+  precmd_functions+=(_strip_devenv_prompt)
 fi
 
 if command -v crib > /dev/null ; then

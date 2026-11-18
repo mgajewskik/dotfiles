@@ -44,6 +44,11 @@ symbol = " "
 format = '[${symbol}${pyenv_prefix}(${version} )]($style)'
 style = "bold green"
 
+# devenv and nix shells: the logo alone, not "impure (devenv-shell-env)"
+[nix_shell]
+symbol = " "
+format = "[$symbol]($style)"
+
 # the venv name is often long (uv uses the project name); show only that one is active
 [env_var.VIRTUAL_ENV]
 style = "bold green"
