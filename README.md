@@ -105,6 +105,9 @@ included. Its desktop is at http://localhost:6080 (password `vscode`). After cha
 Unlike `default/` and `mini/`, this container is generated from `devenv.nix` and gets my tools from Nix instead of
 mise: see [`.devcontainer/devenv.md`](.devcontainer/devenv.md).
 
+On NixOS hosts, agentbox runs a project's agents in a NixOS container instead, without crib or mise: see
+[`.devcontainer/agentbox-guide.md`](.devcontainer/agentbox-guide.md), which also compares the setups.
+
 ### A container as a herdr machine
 
 My host's herdr can treat each container as its own machine: panes, the nvim sidebar and agents run inside it, and

@@ -2,6 +2,7 @@
 
 A proof of concept: this repo's own container is built from [devenv](https://devenv.sh/) and gets my tools from Nix
 instead of mise. The `default/` and `mini/` containers and every host still use mise; nothing here changes them.
+On a NixOS host, [agentbox](agentbox.md) does the same job with a NixOS container instead of crib and an image.
 
 ## Nix or mise
 
