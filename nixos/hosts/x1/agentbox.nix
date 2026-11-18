@@ -1,3 +1,4 @@
+{ config, ... }:
 {
   boot.enableContainers = true;
 
@@ -30,6 +31,32 @@
         # NAT turns on forwarding, so a LAN peer routing 10.233.0.0/16 through this host could open the desktops
         oifname "ve-*" ct state established,related accept
         oifname "ve-*" drop
+      }
+    '';
+  };
+
+  # A download build (fixed-output derivation) runs in this host's network namespace as a nixbld build user, and a
+  # container can start one through the daemon socket, so the table above never sees it. Builds keep the internet
+  # and DNS; they lose this host's addresses, the containers and my LAN. This host's own builds lose them too; the
+  # daemon's binary-cache downloads run as root and are unaffected. Not covered: abstract unix sockets, and LAN
+  # devices with global IPv6 addresses.
+  networking.nftables.tables.nixbld = {
+    family = "inet";
+    content = ''
+      chain output {
+        type filter hook output priority filter; policy accept;
+        # only a positive match jumps: packets without an owning socket (resets, ICMP errors, TIME_WAIT replies) never
+        # match. With auto-allocate-uids on, builds run under another gid range and this stops matching.
+        meta skgid ${toString config.ids.gids.nixbld} jump build
+      }
+
+      chain build {
+        # systemd-resolved's stub, which /etc/resolv.conf names and download builds get a copy of
+        ip daddr 127.0.0.53 meta l4proto { tcp, udp } th dport 53 accept
+        # every address of this host (loopback, veths, LAN and global IPv6), plus broadcast and multicast
+        fib daddr type { local, broadcast, multicast } reject
+        ip daddr { 10.0.0.0/8, 100.64.0.0/10, 169.254.0.0/16, 172.16.0.0/12, 192.168.0.0/16 } reject
+        ip6 daddr { fc00::/7, fe80::/10 } reject
       }
     '';
   };
