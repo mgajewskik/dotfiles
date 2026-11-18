@@ -4,6 +4,7 @@
   imports = [
     ./hardware-configuration.nix
     ./disko.nix
+    ./agentbox.nix
   ];
 
   nix.settings = {
