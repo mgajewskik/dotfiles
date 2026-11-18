@@ -57,3 +57,7 @@ videos
 {{ if .nixTools }}
 .config/mise
 {{ end }}
+
+{{ if or .container (not .nixos) }}
+.local/bin/agentbox
+{{ end }}

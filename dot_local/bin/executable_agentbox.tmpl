@@ -1,0 +1,362 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+dotfiles={{ .chezmoi.sourceDir | quote }}
+user={{ .chezmoi.username | quote }}
+flake="path:$dotfiles/.devcontainer/tools#agentbox"
+key="$HOME/.ssh/agentbox_ed25519"
+known_hosts="$HOME/.ssh/agentbox_known_hosts"
+dotfiles_export="$HOME/.cache/agentbox/dotfiles"
+approved_dir="$HOME/.local/state/agentbox"
+container_path=/run/current-system/sw/bin
+
+die() {
+  echo "agentbox: $*" >&2
+  exit 1
+}
+
+usage() {
+  cat <<'EOF'
+usage: agentbox <command> [project dir, default: the current directory]
+
+  up        create the project's container if needed, start it, apply my dotfiles on its first start
+  shell     ssh into it, in the project
+  desktop   print the addresses of its desktop
+  apply     apply my dotfiles inside again
+  update    rebuild its system from the flake; a running container switches to it in place
+  stop      stop it
+  destroy   delete it and its home (logins, browser profile); the project stays
+  list      list the containers on this machine
+EOF
+}
+
+project_of() {
+  local dir
+  dir=$(realpath -- "${1:-$PWD}")
+  [[ -d "$dir" ]] || die "$dir is not a directory"
+  [[ "$dir" != *[[:space:]:]* ]] || die "$dir: nspawn's --bind cannot take spaces or colons"
+  printf '%s\n' "$dir"
+}
+
+name_of() {
+  local name=${1##*/}
+  name=${name,,}
+  name=${name//[^a-z0-9]/-}
+  name=${name:0:11}
+  while [[ "$name" == -* ]]; do name=${name#-}; done
+  while [[ "$name" == *- ]]; do name=${name%-}; done
+  [[ -n "$name" ]] || die "cannot make a container name from $1"
+  printf '%s\n' "$name"
+}
+
+conf_of() { printf '/etc/nixos-containers/%s.conf\n' "$1"; }
+
+running() { [[ "$(nixos-container status "$1")" == up ]]; }
+
+in_container() {
+  local name=$1
+  shift
+  sudo nixos-container run "$name" -- "$container_path/env" "PATH=$container_path" "$@"
+}
+
+as_user() { in_container "$1" runuser -l "$user" -c "$2"; }
+
+recorded_project() { sed -n 's/^AGENTBOX_PROJECT=//p' "$(conf_of "$1")"; }
+
+require_container() {
+  local name=$1 dir=$2 recorded
+  [[ -e "$(conf_of "$name")" ]] || die "no container $name; run: agentbox up"
+  recorded=$(recorded_project "$name")
+  [[ -n "$recorded" ]] || die "$name is not an agentbox container"
+  [[ "$recorded" == "$dir" ]] || die "container $name belongs to $recorded"
+}
+
+# nixos-container builds into "$systemPath.tmp" with $systemPath unset, so as root it would leave a .tmp link in the
+# current directory (nixpkgs 26.05 nixos-container.pl)
+container_build() { (cd / && sudo nixos-container "$@"); }
+
+export_dotfiles() {
+  mkdir -p "$dotfiles_export"
+  find "$dotfiles_export" -mindepth 1 -delete
+  git -C "$dotfiles" ls-files -z --cached --others --exclude-standard |
+    tar -C "$dotfiles" --null -T - --ignore-failed-read -cf - 2>/dev/null |
+    tar -C "$dotfiles_export" -xf -
+  # chezmoi init runs git init in a source directory without a repository, which fails on the read-only mount
+  git -C "$dotfiles_export" init -q
+}
+
+claude_key() { printf '%s\n' "${1//[^A-Za-z0-9]/-}"; }
+
+expand_path() {
+  local dir=$1 path=$2
+  path=${path/#\~/$HOME}
+  path=${path//\{key\}/$(claude_key "$dir")}
+  printf '%s\n' "$path"
+}
+
+# The project's agentbox.mounts, expanded to "mode host-path path-inside" lines. See ../../.devcontainer/agentbox.md.
+declared_mounts() {
+  local dir=$1 file="$1/agentbox.mounts" mode source target extra i j LC_ALL=C
+  local -a modes=() sources=() targets=()
+  [[ -f "$file" ]] || return 0
+  while read -r mode source target extra; do
+    [[ -z "$mode" || "$mode" == \#* ]] && continue
+    [[ -z "$extra" ]] || die "$file: one mount per line: mode, host path, optional path inside"
+    [[ "$mode" == rw || "$mode" == ro ]] || die "$file: the mode is rw or ro, not $mode"
+    [[ -n "$source" ]] || die "$file: $mode needs a host path"
+    # the approval prompt prints these paths: escape sequences could draw a different list than the one mounted, and
+    # nspawn interprets backslashes in --bind
+    [[ "$source" =~ ^[A-Za-z0-9._/~{}+@=,-]+$ && "${target:-x}" =~ ^[A-Za-z0-9._/~{}+@=,-]+$ ]] ||
+      die "$file: paths may hold only letters, digits and ._/~{}+@=,-"
+    source=$(expand_path "$dir" "$source")
+    target=$(expand_path "$dir" "${target:-$source}")
+    [[ "$source" == /* && "$target" == /* ]] || die "$file: paths start with / or ~"
+    source=$(realpath -m -- "$source")
+    target=$(realpath -m -s -- "$target")
+    # the agent can write the project, so a host path there could become a symlink to anything after I approved it
+    [[ "$source" != "$dir" && "$source" != "$dir"/* ]] || die "$file: $source is inside the project"
+    [[ "$target" != "$dir" && "$target" != "$dir"/* ]] || die "$file: $target is inside the project, which is mounted already"
+    modes+=("$mode")
+    sources+=("$source")
+    targets+=("$target")
+  done <"$file"
+  for i in "${!sources[@]}"; do
+    for j in "${!sources[@]}"; do
+      if [[ "$i" != "$j" && "${modes[j]}" == rw && "${sources[i]}" == "${sources[j]}"/* ]]; then
+        die "$file: ${sources[i]} is inside ${sources[j]}, which the agent can write"
+      fi
+    done
+  done
+  for i in "${!sources[@]}"; do
+    printf '%s %s %s\n' "${modes[i]}" "${sources[i]}" "${targets[i]}"
+  done
+}
+
+# The agent can edit agentbox.mounts, so a mount takes effect only after I approve the list here, like direnv allow;
+# the approved list lives on this host, out of the container's reach
+approve_mounts() {
+  local name=$1 dir=$2 wanted approved answer line
+  approved="$approved_dir/$name.mounts"
+  wanted=$(declared_mounts "$dir")
+  [[ "$wanted" != "$(cat "$approved" 2>/dev/null)" ]] || return 0
+  if [[ -z "$wanted" ]]; then
+    rm -f "$approved"
+    return 0
+  fi
+  echo "agentbox: $dir/agentbox.mounts asks for these mounts (mode, host path, path inside):"
+  while read -r line; do echo "  $line"; done <<<"$wanted"
+  [[ -t 0 ]] || die "approve them in a terminal: agentbox up"
+  read -rp "mount them into $name? [y/N] " answer
+  [[ "$answer" == [yY] ]] || die "not approved; nothing changed"
+  mkdir -p "$approved_dir"
+  printf '%s\n' "$wanted" >"$approved"
+}
+
+mounts_of() {
+  local name=$1 dir=$2
+  echo "rw $dir $dir"
+  [[ "$dir" == "$dotfiles" ]] || echo "ro $dotfiles_export $dotfiles"
+  cat "$approved_dir/$name.mounts" 2>/dev/null || true
+}
+
+conf_changed=""
+
+write_conf() {
+  local name=$1 dir=$2 conf binds="" mode source target wanted
+  conf=$(conf_of "$name")
+  while read -r mode source target; do
+    [[ -e "$source" ]] || mkdir -p "$source"
+    if [[ "$mode" == rw ]]; then binds+=" --bind=$source:$target:idmap"; else binds+=" --bind-ro=$source:$target:idmap"; fi
+  done < <(mounts_of "$name" "$dir")
+  binds=${binds# }
+  wanted=$(
+    grep -vE '^(AGENTBOX_PROJECT|PRIVATE_USERS|EXTRA_NSPAWN_FLAGS)=' "$conf" || true
+    printf 'AGENTBOX_PROJECT=%s\nPRIVATE_USERS=pick\nEXTRA_NSPAWN_FLAGS="%s"\n' "$dir" "$binds"
+  )
+  conf_changed=""
+  [[ "$wanted" != "$(cat "$conf")" ]] || return 0
+  printf '%s\n' "$wanted" | sudo tee "$conf" >/dev/null
+  conf_changed=1
+}
+
+# nspawn resolves a mount point inside the container's root and follows symlinks there, so a symlink the agent planted
+# on the way could land an rw mount where container root reads, e.g. among systemd units. Checked while the container
+# is stopped, so nothing inside can change it before the start.
+check_mount_points() {
+  local name=$1 target path part
+  local -a parts
+  shift
+  for target; do
+    path=""
+    IFS=/ read -ra parts <<<"${target#/}"
+    for part in "${parts[@]}"; do
+      path+="/$part"
+      if sudo test -L "/var/lib/nixos-containers/$name$path"; then
+        die "$path in container $name is a symlink; remove it before agentbox up mounts over it"
+      fi
+    done
+  done
+}
+
+# nspawn creates missing mount points as root, so their folders under my home would block the agent user. This runs as
+# root over the agent's home: a folder the agent replaced with a symlink, say into a mount, is skipped, not followed.
+own_mount_parents() {
+  local name=$1
+  shift
+  # shellcheck disable=SC2016
+  in_container "$name" sh -c '
+    user=$1
+    shift
+    home=$(getent passwd "$user" | cut -d: -f6)
+    for target; do
+      dir=$(dirname "$target")
+      parents=""
+      while [ "${dir#"$home"}" != "$dir" ]; do
+        parents="$dir $parents"
+        [ "$dir" = "$home" ] && break
+        dir=$(dirname "$dir")
+      done
+      for dir in $parents; do
+        [ -L "$dir" ] && break
+        [ "$(stat -c %u "$dir")" = 0 ] && chown -h "$user:users" "$dir"
+      done
+    done
+  ' sh "$user" "$@"
+}
+
+record_project() {
+  # shellcheck disable=SC2016
+  in_container "$1" sh -c 'mkdir -p /var/lib/agentbox && printf "%s\n" "$1" > /var/lib/agentbox/project' sh "$2"
+}
+
+authorize_key() {
+  [[ -f "$key" ]] || ssh-keygen -q -t ed25519 -N '' -C agentbox -f "$key"
+  as_user "$1" 'umask 077 && mkdir -p ~/.ssh && cat > ~/.ssh/authorized_keys' <"$key.pub"
+}
+
+write_ssh_config() {
+  local name=$1 ip
+  ip=$(nixos-container show-ip "$name")
+  mkdir -p "$HOME/.ssh/config.d"
+  cat >"$HOME/.ssh/config.d/agentbox-$name" <<EOF
+Host agentbox-$name
+  HostName $ip
+  User $user
+  IdentityFile $key
+  IdentitiesOnly yes
+  ForwardAgent no
+  UserKnownHostsFile $known_hosts
+  StrictHostKeyChecking accept-new
+EOF
+}
+
+apply_dotfiles() {
+  local name=$1 dir=$2
+  [[ "$dir" == "$dotfiles" ]] || export_dotfiles
+  as_user "$name" "chezmoi init --apply --source $(printf %q "$dotfiles")"
+  if [[ -e "$dir/devenv.nix" || -e "$dir/devenv.yaml" ]]; then
+    as_user "$name" "cd $(printf %q "$dir") && devenv allow"
+  fi
+  in_container "$name" systemctl restart herdr-server
+}
+
+cmd_up() {
+  local dir name conf created="" targets
+  dir=$(project_of "${1:-}")
+  name=$(name_of "$dir")
+  conf=$(conf_of "$name")
+  if [[ ! -e "$conf" ]]; then
+    container_build create "$name" --flake "$flake"
+    created=1
+  fi
+  local recorded
+  recorded=$(recorded_project "$name")
+  if [[ -z "$recorded" && -z "$created" ]]; then die "$name is not an agentbox container"; fi
+  if [[ -n "$recorded" && "$recorded" != "$dir" ]]; then die "container $name belongs to $recorded"; fi
+  approve_mounts "$name" "$dir"
+  [[ "$dir" == "$dotfiles" ]] || export_dotfiles
+  write_conf "$name" "$dir"
+  mapfile -t targets < <(mounts_of "$name" "$dir" | cut -d' ' -f3)
+  if [[ -n "$conf_changed" ]] && running "$name"; then sudo nixos-container stop "$name"; fi
+  if ! running "$name"; then
+    check_mount_points "$name" "${targets[@]}"
+    sudo nixos-container start "$name"
+  fi
+  own_mount_parents "$name" "${targets[@]}"
+  record_project "$name" "$dir"
+  authorize_key "$name"
+  write_ssh_config "$name"
+  if ! as_user "$name" 'test -f ~/.config/chezmoi/chezmoi.toml'; then apply_dotfiles "$name" "$dir"; fi
+  echo "agentbox: $name is up; agentbox shell, or ssh agentbox-$name"
+}
+
+cmd_shell() {
+  local dir name
+  dir=$(project_of "${1:-}")
+  name=$(name_of "$dir")
+  require_container "$name" "$dir"
+  running "$name" || die "$name is stopped; run: agentbox up"
+  ssh -t -i "$key" -o IdentitiesOnly=yes -o ForwardAgent=no -o UserKnownHostsFile="$known_hosts" -o StrictHostKeyChecking=accept-new \
+    "$user@$(nixos-container show-ip "$name")" "cd $(printf %q "$dir") && exec \$SHELL -l"
+}
+
+cmd_desktop() {
+  local dir name ip
+  dir=$(project_of "${1:-}")
+  name=$(name_of "$dir")
+  require_container "$name" "$dir"
+  ip=$(nixos-container show-ip "$name")
+  echo "noVNC:    http://$ip:6080/vnc.html?autoconnect=1&resize=remote (password: vscode)"
+  echo "TigerVNC: vncviewer $ip:5901 (password: vscode)"
+}
+
+cmd_apply() {
+  local dir name
+  dir=$(project_of "${1:-}")
+  name=$(name_of "$dir")
+  require_container "$name" "$dir"
+  apply_dotfiles "$name" "$dir"
+}
+
+cmd_update() {
+  local dir name
+  dir=$(project_of "${1:-}")
+  name=$(name_of "$dir")
+  require_container "$name" "$dir"
+  container_build update "$name" --flake "$flake"
+}
+
+cmd_stop() {
+  local dir name
+  dir=$(project_of "${1:-}")
+  name=$(name_of "$dir")
+  require_container "$name" "$dir"
+  sudo nixos-container stop "$name"
+}
+
+cmd_destroy() {
+  local dir name ip answer
+  dir=$(project_of "${1:-}")
+  name=$(name_of "$dir")
+  require_container "$name" "$dir"
+  ip=$(nixos-container show-ip "$name")
+  read -rp "delete container $name and its home (logins, browser profile)? [y/N] " answer
+  [[ "$answer" == [yY] ]] || exit 0
+  sudo nixos-container destroy "$name"
+  rm -f "$HOME/.ssh/config.d/agentbox-$name" "$approved_dir/$name.mounts"
+  [[ ! -f "$known_hosts" ]] || ssh-keygen -q -R "$ip" -f "$known_hosts" >/dev/null
+}
+
+cmd_list() {
+  local name
+  for name in $(nixos-container list); do
+    printf '%-12s %-5s %s\n' "$name" "$(nixos-container status "$name")" "$(recorded_project "$name")"
+  done
+}
+
+command=${1:-}
+[[ $# -eq 0 ]] || shift
+case "$command" in
+  up | shell | desktop | apply | update | stop | destroy | list) "cmd_$command" "$@" ;;
+  *) usage ;;
+esac
