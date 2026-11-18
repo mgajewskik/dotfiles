@@ -61,6 +61,14 @@
     '';
   };
 
+  # caps for each agentbox container (the template unit nixos-container starts them with), so a runaway agent can't
+  # freeze this host; builds run in the daemon and don't count
+  systemd.services."container@".serviceConfig = {
+    MemoryMax = "12G";
+    TasksMax = 4096;
+    CPUQuota = "600%";
+  };
+
   # containers are untrusted users of this host's nix daemon, so only caches configured here apply to them
   nix.settings = {
     extra-substituters = [ "https://devenv.cachix.org" ];
