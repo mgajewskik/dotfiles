@@ -4,7 +4,7 @@
   inputs.nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
 
   outputs =
-    { nixpkgs, ... }:
+    { self, nixpkgs, ... }:
     let
       forEachSystem = nixpkgs.lib.genAttrs [
         "x86_64-linux"
@@ -76,5 +76,15 @@
           };
         }
       );
+
+      # the base of every agentbox container; a project's .agentbox/container/flake.nix imports it and adds its own
+      nixosModules.agentbox = {
+        imports = [ ./agentbox.nix ];
+        _module.args.tools = self.packages.x86_64-linux.default;
+      };
+
+      nixosConfigurations.agentbox = nixpkgs.lib.nixosSystem {
+        modules = [ self.nixosModules.agentbox ];
+      };
     };
 }
