@@ -39,7 +39,7 @@ How the system you just installed works, how to run it day to day, how to fix it
 $ sudo nixos-rebuild switch --flake ~/.local/share/chezmoi/nixos#x1
 # go back to the previous generation (until reboot; chapter 8 makes it stick)
 $ sudo nixos-rebuild switch --rollback
-# update all pinned inputs (nixpkgs, nixos-hardware, disko), then switch
+# update all pinned inputs (nixpkgs, nixos-hardware, disko and the rest), then switch
 $ nix flake update --flake ~/.local/share/chezmoi/nixos
 # run a tool once without installing it
 $ nix shell nixpkgs#ripgrep
@@ -131,9 +131,9 @@ An old generation still exists until garbage collection deletes it. Your config 
 | `systemctl enable foo` | `services.foo.enable = true;` | `/etc/systemd/system` is generated. `systemctl enable` of a system unit fails. User units, including those from `systemd.packages`, can still be enabled by hand. |
 | roll back with snap-pac snapshots | pick an older generation in the Limine menu, or `--rollback` | Old generations are complete systems. Root is not snapshotted, only `/home`. |
 | run any downloaded binary | works for most through nix-ld and envfs, which this config enables | Generic Linux binaries expect `/lib64/ld-linux-x86-64.so.2` and `/usr/lib`, which NixOS does not have. Chapter 4 explains the workaround. |
-| AUR | nixpkgs has over 120,000 packages. For the rest, write a small package file like `pkgs/helium.nix`. | A package is a Nix function. Chapter 7 walks through yours. |
+| AUR | nixpkgs has over 120,000 packages. For the rest, write a small package file like `modules/pkgs/helium.nix`. | A package is a Nix function. Chapter 7 walks through yours. |
 | `/usr/bin/foo` | `/run/current-system/sw/bin/foo` | Binaries are symlinks into the store. `readlink -f $(which foo)` shows the real path. |
-| edit `/etc/fstab` | edit `hosts/x1/disko.nix` or `fileSystems.*` | disko generates the `fileSystems` entries from the disk layout. |
+| edit `/etc/fstab` | edit `modules/hosts/x1/disko.nix` or `fileSystems.*` | disko generates the `fileSystems` entries from the disk layout. |
 | a broken update can leave a half-upgraded system | a broken config fails at evaluation, before anything changes | Nix evaluates and builds the whole new system first. Activation happens only after a successful build. |
 | disk space freed by removing packages | space is freed only by garbage collection | Old generations keep their packages alive. `nix-collect-garbage` deletes them. |
 | rolling release | stable branch `nixos-26.05`, with security and bug fixes until shortly after the next release | A major upgrade is a one-word edit in `flake.nix`. Never change `system.stateVersion`. |
@@ -147,13 +147,24 @@ An old generation still exists until garbage collection deletes it. Your config 
 **Stage 1: inputs**
 
 ```
-  ~/.local/share/chezmoi/nixos/flake.nix  --- asks for --->  nixpkgs        github:NixOS/nixpkgs/nixos-26.05
-                                      nixos-hardware github:NixOS/nixos-hardware
-                                      disko          github:nix-community/disko/latest
+  ~/.local/share/chezmoi/nixos/flake.nix  --- asks for --->
+      nixpkgs           github:NixOS/nixpkgs/nixos-26.05
+      nixpkgs-unstable  github:NixOS/nixpkgs/nixos-unstable
+      flake-parts       github:hercules-ci/flake-parts
+      import-tree       github:vic/import-tree
+      nixos-hardware    github:NixOS/nixos-hardware
+      disko             github:nix-community/disko/latest
+      voxtype           github:peteonrails/voxtype/v1.1.1
+      vortix            github:Harry-kp/vortix/v0.5.5
   ~/.local/share/chezmoi/nixos/flake.lock --- pins each to an exact git commit + content hash
-                                      nixpkgs        6f06d204...
-                                      nixos-hardware 04c6b94f...
-                                      disko          de570873...
+      nixpkgs           6f06d204...
+      nixpkgs-unstable  04906337...
+      flake-parts       ea2630b7...
+      import-tree       eb1b52ea...
+      nixos-hardware    04c6b94f...
+      disko             de570873...
+      voxtype           014c5610...
+      vortix            628d1b2c...
 ```
 
 The lock decides which nixpkgs you get. Until you run `nix flake update`, every rebuild uses the same versions, on any machine.
@@ -161,11 +172,18 @@ The lock decides which nixpkgs you get. Until you run `nix flake update`, every 
 **Stage 2: evaluation**
 
 ```
-  inputs ──> nixpkgs.lib.nixosSystem { modules = [
-               disko.nixosModules.disko
-               nixos-hardware.nixosModules.lenovo-thinkpad-x1-extreme
-               ./hosts/x1/configuration.nix   (imports hardware-configuration.nix, disko.nix)
-             ] }
+  flake.nix   outputs = inputs: flake-parts.lib.mkFlake { inherit inputs; } (import-tree ./modules)
+                    │
+                    v
+  import-tree collects every modules/**/*.nix  (each file is a flake-parts module)
+                    │
+                    v
+  flake-parts evaluates them together; they define
+     flake.modules.nixos.<feature>      the feature modules (nix, boot, desktop, ...)
+     flake.modules.nixos.x1             the host: imports the features, disko, nixos-hardware
+     flake.nixosConfigurations.x1  =  nixpkgs.lib.nixosSystem {
+                                        modules = [ self.modules.nixos.x1 ];
+                                      }
                     │  merged with ~2000 NixOS modules from nixpkgs
                     v
              config   (one big attribute set: every option's final value)
@@ -183,7 +201,7 @@ Evaluation only computes. Typos, unknown options, conflicting values and missing
      │  needs thousands of store paths
      ├── already in /nix/store?           -> skip
      ├── on cache.nixos.org (same hash)?  -> download        (almost everything)
-     └── neither                          -> build locally   (your pkgs/*.nix wrappers,
+     └── neither                          -> build locally   (your modules/pkgs/*.nix wrappers,
                                                                generated config files)
      v
   /nix/store/...-nixos-system-x1-26.05.20261029.6f06d20
@@ -219,22 +237,43 @@ Because the store path hash comes from the inputs, the binary cache can say "I a
 
 ## 03 · Your files, explained
 
-The flake has four files that describe the machine and three that package vendor apps. Each one is a Nix expression. Chapter 5 covers the syntax. Here the point is what each block does on the running x1.
+The flake is one `flake.nix` plus a `modules/` directory. Every `.nix` file under `modules/` is a flake-parts module, and import-tree loads all of them. Most files are a feature of the machine (network, laptop, desktop), one describes the x1 itself, and four package vendor apps. Each one is a Nix expression. Chapter 5 covers the syntax. Here the point is what each block does on the running x1. For why the flake is laid out this way, and how to add your own files, read [the dendritic flake guide](dendritic-flake-guide.md).
 
 ```
 ~/.local/share/chezmoi/nixos/
-├── flake.nix                       inputs and the one output: nixosConfigurations.x1
-├── flake.lock                      exact commits of nixpkgs, nixos-hardware, disko
-├── hosts/x1/
-│   ├── configuration.nix           the system: boot, network, users, services, desktop, packages
-│   ├── hardware-configuration.nix  kernel modules found by nixos-generate-config
-│   └── disko.nix                   partitions, LUKS, btrfs subvolumes, swapfile
-├── pkgs/
-│   ├── helium.nix                  Helium browser from its release tarball
-│   ├── claude-desktop.nix          Claude Desktop from its .deb
-│   └── grok-bot.nix                Grok Bot from its .deb
+├── flake.nix                       inputs, and one line that loads modules/
+├── flake.lock                      exact commits of the eight inputs
+├── modules/
+│   ├── flake-parts.nix             turns on flake.modules, sets systems = [ "x86_64-linux" ]
+│   ├── nix.nix                     nix settings, garbage collection, allowUnfree, nh
+│   ├── boot.nix                    Limine, EFI, initrd, firmware
+│   ├── networking.nix              networkd, iwd, nftables, DNS
+│   ├── openssh.nix                 sshd
+│   ├── locale.nix                  time zone, locale, console keymap
+│   ├── user.nix                    the mgajewskik account, zsh
+│   ├── laptop.nix                  Bluetooth, lid and power key, tlp, fwupd
+│   ├── audio.nix                   pipewire
+│   ├── printing.nix                CUPS, the Brother printer, avahi
+│   ├── keys.nix                    smartcards, keyring, SSH and GPG agents
+│   ├── podman.nix                  rootless Podman
+│   ├── agentbox.nix                NixOS containers for per-project agents
+│   ├── syncthing.nix               Syncthing as a user service
+│   ├── desktop.nix                 sway, uwsm, portals, theme, fonts, desktop services and tools
+│   ├── cli.nix                     envfs, nix-ld, command-line system packages
+│   ├── apps.nix                    GUI apps, including the local packages
+│   ├── tools.nix                   the packages.tools bundle, and the module that installs it
+│   ├── hosts/x1/
+│   │   ├── configuration.nix       the x1: nixosConfigurations.x1 and the list of features it uses
+│   │   ├── hardware.nix            kernel modules found by nixos-generate-config
+│   │   └── disko.nix               partitions, LUKS, btrfs subvolumes, swapfile, snapper
+│   └── pkgs/
+│       ├── helium.nix              Helium browser from its release tarball
+│       ├── claude-desktop.nix      Claude Desktop from its .deb
+│       ├── grok-bot.nix            Grok Bot from its .deb
+│       └── crib.nix                crib, the devcontainer CLI, from its release tarball
 └── docs/
-    └── x1-nixos-handbook.md        this handbook
+    ├── x1-nixos-handbook.md        this handbook
+    └── dendritic-flake-guide.md    why the flake is laid out this way
 ```
 
 ### flake.nix
@@ -247,6 +286,12 @@ The flake has four files that describe the machine and three that package vendor
 
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-26.05";
+    nixpkgs-unstable.url = "github:NixOS/nixpkgs/nixos-unstable";
+    flake-parts = {
+      url = "github:hercules-ci/flake-parts";
+      inputs.nixpkgs-lib.follows = "nixpkgs";
+    };
+    import-tree.url = "github:vic/import-tree";
     nixos-hardware = {
       url = "github:NixOS/nixos-hardware";
       inputs.nixpkgs.follows = "nixpkgs";
@@ -255,39 +300,47 @@ The flake has four files that describe the machine and three that package vendor
       url = "github:nix-community/disko/latest";
       inputs.nixpkgs.follows = "nixpkgs";
     };
-  };
-
-  outputs = { nixpkgs, nixos-hardware, disko, ... }: {
-    nixosConfigurations.x1 = nixpkgs.lib.nixosSystem {
-      modules = [
-        disko.nixosModules.disko
-        nixos-hardware.nixosModules.lenovo-thinkpad-x1-extreme
-        ./hosts/x1/configuration.nix
-      ];
+    voxtype = {
+      url = "github:peteonrails/voxtype/v1.1.1";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
+    vortix = {
+      url = "github:Harry-kp/vortix/v0.5.5";
+      inputs.nixpkgs.follows = "nixpkgs";
     };
   };
+
+  outputs =
+    inputs: inputs.flake-parts.lib.mkFlake { inherit inputs; } (inputs.import-tree ./modules);
 }
 ```
 
-- `inputs` names three other flakes. `nixos-26.05` is the stable branch. The lock freezes the exact commit.
-- `inputs.nixpkgs.follows = "nixpkgs"` tells nixos-hardware and disko to use your nixpkgs instead of locking their own. Without it you would download and evaluate a second nixpkgs.
-- `outputs` is a function. Nix calls it with the fetched inputs and gets back an attribute set. The only output is `nixosConfigurations.x1`, which is what `--flake ~/.local/share/chezmoi/nixos#x1` refers to. If you leave out `#x1`, nixos-rebuild uses the hostname, which is also `x1`.
-- `nixosSystem` evaluates your three modules together with all NixOS modules. There is no `system = "x86_64-linux"` here. The platform comes from `nixpkgs.hostPlatform` in `hardware-configuration.nix`.
+- `inputs` names eight other flakes. `nixos-26.05` is the stable branch, and `nixpkgs-unstable` is a second nixpkgs that only `modules/tools.nix` uses. The lock freezes the exact commit of each.
+- `inputs.nixpkgs.follows = "nixpkgs"` tells nixos-hardware, disko, voxtype and vortix to use your nixpkgs instead of locking their own. Without it you would download and evaluate a second nixpkgs. flake-parts only needs nixpkgs' `lib`, so it follows through `nixpkgs-lib`.
+- `outputs` is a function. Nix calls it with the fetched inputs and gets back an attribute set. Here the function does almost nothing: `flake-parts.lib.mkFlake` builds the attribute set from a list of modules, and `import-tree ./modules` is that list, every `.nix` file under `modules/`. Adding a file adds a module. Nothing lists the files.
+- `modules/flake-parts.nix` imports flake-parts' `modules` flake module, which adds the `flake.modules.<class>.<name>` option every feature file writes to, and sets `systems`.
+- The outputs come from the files. `modules/hosts/x1/configuration.nix` defines `nixosConfigurations.x1`, which is what `--flake ~/.local/share/chezmoi/nixos#x1` refers to. If you leave out `#x1`, nixos-rebuild uses the hostname, which is also `x1`. The `modules/pkgs/*.nix` files and `tools.nix` define `packages.<system>.*`, so `nix build ~/.local/share/chezmoi/nixos#helium` works too.
+- `nixosSystem` evaluates one module, `self.modules.nixos.x1`, together with all NixOS modules. That module imports the feature modules. There is no `system = "x86_64-linux"` in the `nixosSystem` call. The platform comes from `nixpkgs.hostPlatform` in `hardware.nix`.
+- Nothing passes inputs into the NixOS modules by hand. A module file that needs an input or the flake itself takes `{ inputs, self, ... }:` from flake-parts, one level above the NixOS module it defines.
 - A side effect of `nixosSystem`: the x1's flake registry and `NIX_PATH` point `nixpkgs` at this exact locked nixpkgs. So `nix shell nixpkgs#foo` on the x1 uses the same revision as the system, mostly from the binary cache, with no extra download of nixpkgs.
 
-### hardware-configuration.nix
+### hardware.nix
 
-Normally written by `nixos-generate-config`. Yours was generated with `--no-filesystems`, because disko provides the mounts.
+*modules/hosts/x1/hardware.nix*
+
+Normally written by `nixos-generate-config`. Yours was generated with `--no-filesystems`, because disko provides the mounts. It is wrapped so that it adds to `flake.modules.nixos.x1`: the NixOS module inside is the function `{ config, lib, modulesPath, ... }:`.
 
 | Line | What it does |
 |----|----|
 | `imports = [ (modulesPath + "/installer/scan/not-detected.nix") ]` | Enables redistributable firmware by default (`mkDefault true`). |
-| `boot.initrd.availableKernelModules = [ "xhci_pci" "thunderbolt" "nvme" "usb_storage" "sd_mod" "rtsx_pci_sdmmc" ]` | Modules copied into the initrd so udev can load them before the root disk is open: NVMe for the disk, USB for a keyboard at the LUKS prompt, the SD card reader. |
+| `boot.initrd.availableKernelModules = [ "xhci_pci" "nvme" "usb_storage" "sd_mod" ]` | Modules copied into the initrd so udev can load them before the root disk is open: NVMe for the disk, USB for a keyboard at the LUKS prompt, `sd_mod` for SCSI disks such as USB drives. |
 | `boot.kernelModules = [ "kvm-intel" ]` | Loaded after boot. Enables KVM for QEMU, including Claude Desktop's Cowork VM. |
 | `nixpkgs.hostPlatform = lib.mkDefault "x86_64-linux"` | Which architecture to build for. |
 | `hardware.cpu.intel.updateMicrocode = …` | Loads Intel microcode updates when firmware is enabled. |
 
 ### disko.nix
+
+*modules/hosts/x1/disko.nix*
 
 disko reads this file twice. During the install, the disko command partitioned and formatted the disk from it. On every rebuild, the disko module turns the same description into `fileSystems`, `boot.initrd.luks.devices` and `swapDevices`. Editing it later changes mount options. It never reformats a running system.
 
@@ -304,44 +357,50 @@ disko reads this file twice. During the install, the disko command partitioned a
         └── @swap            -> /swap             /swap/swapfile 35G, no compression
 ```
 
-The 35G swapfile is bigger than the 32 GB of RAM, so hibernation would fit, but hibernation is not configured. It would need `boot.resumeDevice` and a `resume_offset` kernel parameter.
+The file also holds `services.snapper.configs.home`, the snapper side of the `@home_snapshots` subvolume: manual snapshots of `/home` only, at most 10.
 
-### configuration.nix, block by block
+The 35G swapfile is bigger than the 32 GB of RAM, so hibernation fits. `modules/hosts/x1/configuration.nix` points the kernel at it with `boot.resumeDevice = "/dev/mapper/root"` and the `resume_offset=533760` kernel parameter.
 
-The file starts with `{ pkgs, ... }:`. That makes it a function the module system calls, passing `pkgs`, the package set. Everything inside is option assignments.
+### The feature modules, file by file
 
-| Block | What it does on the x1 |
+Each feature file defines `flake.modules.nixos.<name>`, and the host file lists the names it wants. The files that need packages or inputs are functions: `{ pkgs, ... }:` makes the NixOS module a function the module system calls, passing `pkgs`, the package set. Everything inside is option assignments.
+
+| File | What its blocks do on the x1 |
 |----|----|
-| `imports` | Pulls in `hardware-configuration.nix` and `disko.nix` as more modules. Paths are relative to this file. |
-| `nix.settings` | Writes `/etc/nix/nix.conf`. Turns on the `nix` command and flakes. `auto-optimise-store` hard-links identical files when new store paths are written. |
-| `nix.gc` | Creates `nix-gc.timer`, weekly: `nix-collect-garbage --delete-older-than 14d`. Deletes system generations older than 14 days, except the current one, then unreferenced store paths. |
-| `nixpkgs.config.allowUnfree` | Lets unfree packages evaluate: Chrome, Obsidian, Insync and the Intel OpenCL runtime. |
-| `boot.loader.limine` | Limine as bootloader. On every `switch` or `boot`, the installer copies each generation's kernel and initrd to `/boot/limine/` and rewrites `limine.conf`. Keeps the newest 10 entries. The menu waits 5 seconds. The kernel command line editor is off. |
-| `boot.initrd.systemd.enable` | systemd runs the initrd and asks for the LUKS passphrase. In 26.05 this is already the default. |
-| `hardware.intelgpu.computeRuntime = "legacy"` | This option comes from nixos-hardware, not nixpkgs. It picks the OpenCL runtime for older Intel GPUs. Without the nixos-hardware module the build would fail with "option does not exist". |
-| NVIDIA block (commented) | The proprietary driver with PRIME offload, off. The GTX 1050 Ti runs on nouveau. |
-| `networking.*`, `systemd.network.*` | systemd-networkd instead of NetworkManager, iwd for Wi-Fi, nftables firewall. Wired gets route metric 100 and Wi-Fi 600, so wired wins. `wait-online.anyInterface` means boot does not wait for both. These become `/etc/systemd/network/20-wired.network` and `25-wireless.network`. |
-| `networking.firewall.extraInputRules` | Appends `ip saddr 192.168.0.0/16 accept` to the `input-allow` chain of the `nixos-fw` nftables table. Every port is open to the 192.168.x.x LAN. SSH (22) and mDNS (5353) are open to everyone by their modules' defaults. |
-| `services.resolved` | systemd-resolved for DNS. Its own mDNS is off because Avahi handles `.local`. |
-| `time`, `i18n`, `console` | Warsaw time, English locale plus Polish, Polish console keymap. `earlySetup` applies the keymap and font in the initrd, so the LUKS prompt already uses the Polish layout. |
-| `users.users.mgajewskik` | UID 1000 or above, `wheel` (sudo), zsh. No password or SSH key in the flake: the password lives only in `/etc/shadow`, and the key in `~/.ssh/authorized_keys`. |
-| `services.logind` | Writes `/etc/systemd/logind.conf`: lid suspends on battery and is ignored on AC or docked. The power key is ignored; a long press powers off. |
-| `services.tlp` | Battery charge thresholds 55/60%, no USB autosuspend for Bluetooth. Chapter 6 traces this option to `/etc/tlp.conf`. |
-| `services.snapper.configs.home` | Manual snapshots of `/home` only, at most 10. |
-| `services.openssh` | sshd with keys only and no root login. The firewall port opens automatically. |
-| pipewire, blueman, printing, avahi | Audio, Bluetooth applet, CUPS with the Brother DCP-T720DW driver, and mDNS so the printer is found. |
-| fwupd, udisks2, gvfs, pcscd, gnome-keyring | Firmware updates, removable media, smartcards, the secret store. `gcr-ssh-agent` is off because `programs.ssh.startAgent` runs the SSH agent. |
-| `services.envfs`, `programs.nix-ld` | Make generic Linux binaries and `#!/bin/bash` scripts work. Chapter 4 explains both. |
-| `virtualisation.podman` | Rootless Podman. `dockerCompat` installs a `docker` command that runs Podman. |
-| `fileSystems."/mnt/backups"` | NFS share from 192.168.1.123, mounted on first access (`x-systemd.automount`). Boot continues without it (`nofail`). |
-| `programs.sway`, `uwsm`, `soteria` | Sway with its helper tools, the UWSM session manager, and a polkit agent. Also enables graphics, XWayland, polkit and the xdg portals. There is no display manager: you log in on tty1 and `.zprofile` starts UWSM. |
-| `systemd.packages`, `systemd.user.services` | Installs the user units that ship with Syncthing and mako, and starts them through `wantedBy`: Syncthing at login, mako with the graphical session. vicinae's unit is written out in full because its package puts the file where `systemd.packages` does not look. The rest of your desktop units come from chezmoi in `~/.config/systemd/user`. |
-| `environment.systemPackages` | Every installed program, merged into `/run/current-system/sw`. Includes three local packages (`callPackage ../../pkgs/helium.nix { }`) and voxtype rebuilt with ONNX support. |
-| `system.stateVersion = "26.05"` | Records which defaults the first install had, for stateful services. It is not the NixOS version. Never change it when upgrading. |
+| `modules/hosts/x1/configuration.nix` | Defines `nixosConfigurations.x1` and the `x1` module. `imports` pulls in the disko and nixos-hardware modules and the feature list (the other files in this table, plus `hardware.nix` and `disko.nix`, which add to the same `x1` module). Sets `networking.hostName`, `boot.resumeDevice` with a `resume_offset` kernel parameter, and `system.stateVersion = "26.05"`, which records which defaults the first install had, for stateful services. It is not the NixOS version. Never change it when upgrading. |
+| | `hardware.intelgpu.computeRuntime = "legacy"` comes from nixos-hardware, not nixpkgs. It picks the OpenCL runtime for older Intel GPUs. Without the nixos-hardware module the build would fail with "option does not exist". |
+| | Two commented blocks: the NVIDIA block, the proprietary driver with PRIME offload, off (the GTX 1050 Ti runs on nouveau), and `fileSystems."/mnt/backups"`, an NFS share from 192.168.1.123, mounted on first access (`x-systemd.automount`), where boot would continue without it (`nofail`). |
+| `modules/nix.nix` | `nix.settings` writes `/etc/nix/nix.conf`: turns on the `nix` command and flakes, and `auto-optimise-store` hard-links identical files when new store paths are written. `nix.gc` creates `nix-gc.timer`, weekly: `nix-collect-garbage --delete-older-than 14d`, which deletes system generations older than 14 days, except the current one, then unreferenced store paths. `nixpkgs.config.allowUnfree` lets unfree packages evaluate: Chrome, Obsidian, Insync and the Intel OpenCL runtime. `programs.nh` installs nh and points it at this flake. |
+| `modules/boot.nix` | `boot.loader.limine`: Limine as bootloader. On every `switch` or `boot`, the installer copies each generation's kernel and initrd to `/boot/limine/` and rewrites `limine.conf`. Keeps the newest 10 entries. The menu waits 5 seconds. The kernel command line editor is off. `boot.loader.efi.canTouchEfiVariables` lets it write the EFI boot entry. `boot.initrd.systemd.enable`: systemd runs the initrd and asks for the LUKS passphrase. In 26.05 this is already the default. `boot.blacklistedKernelModules` keeps the PC speaker modules (`pcspkr`, `snd_pcsp`) from loading. `hardware.enableRedistributableFirmware` turns firmware on. |
+| `modules/networking.nix` | `networking.*`, `systemd.network.*`: systemd-networkd instead of NetworkManager, iwd for Wi-Fi, nftables firewall. Wired gets route metric 100 and Wi-Fi 600, so wired wins. `wait-online.anyInterface` means boot does not wait for both. These become `/etc/systemd/network/20-wired.network` and `25-wireless.network`. |
+| | `networking.firewall.extraInputRules` appends `ip saddr 192.168.0.0/16 accept` to the `input-allow` chain of the `nixos-fw` nftables table. Every port is open to the 192.168.x.x LAN. SSH (22) and mDNS (5353) are open to everyone by their modules' defaults. |
+| | `boot.kernel.sysctl` sets `arp_ignore = 1` and `arp_announce = 2`, so wired and Wi-Fi on the same subnet do not answer ARP for each other's address. The comment in the file explains the stalls this prevents. |
+| | `services.resolved`: systemd-resolved for DNS. Its own mDNS is off because Avahi handles `.local`. |
+| `modules/openssh.nix` | `services.openssh`: sshd with keys only and no root login. The firewall port opens automatically. |
+| `modules/locale.nix` | `time`, `i18n`, `console`: Warsaw time, English locale plus Polish, Polish console keymap. `earlySetup` applies the keymap and font in the initrd, so the LUKS prompt already uses the Polish layout. |
+| `modules/user.nix` | `users.users.mgajewskik`: UID 1000 or above, `wheel` (sudo), zsh. No password or SSH key in the flake: the password lives only in `/etc/shadow`, and the key in `~/.ssh/authorized_keys`. |
+| `modules/laptop.nix` | `services.logind` writes `/etc/systemd/logind.conf`: lid suspends on battery and is ignored on AC or docked. The power key is ignored; a long press powers off. `services.tlp`: battery charge thresholds 55/60%, no USB autosuspend for Bluetooth. Chapter 6 traces this option to `/etc/tlp.conf`. Also Bluetooth with the blueman applet, and fwupd for firmware updates. |
+| `modules/audio.nix` | pipewire with its ALSA, PulseAudio and JACK layers, and rtkit. |
+| `modules/printing.nix` | CUPS with the Brother DCP-T720DW driver and the printer added by name, and Avahi for mDNS so the printer is found. |
+| `modules/keys.nix` | pcscd for smartcards, with a polkit rule that lets your user reach the card from the user manager. gnome-keyring, the secret store. `gcr-ssh-agent` is off because `programs.ssh.startAgent` runs the SSH agent. The GnuPG agent uses `pinentry-gnome3`. |
+| `modules/podman.nix` | `virtualisation.podman`: rootless Podman. `dockerCompat` installs a `docker` command that runs Podman. |
+| `modules/agentbox.nix` | NixOS containers for per-project agents: NAT for the `ve-*` interfaces, nftables tables that confine the containers (and Nix build users) to the internet, not this host or the LAN, resource caps per container, and the devenv binary cache. |
+| `modules/syncthing.nix` | `systemd.packages`, `systemd.user.services`: installs the user unit that ships with Syncthing and starts it at login through `wantedBy`. |
+| `modules/desktop.nix` | `programs.sway`, `uwsm`, `soteria`: Sway with its helper tools, the UWSM session manager, and a polkit agent. Also enables graphics, XWayland, polkit and the xdg portals. There is no display manager: you log in on tty1 and `.zprofile` starts UWSM. |
+| | `systemd.packages`, `systemd.user.services` for mako and vicinae: mako's unit is installed from its package and starts with the graphical session. vicinae's unit is written out in full because its package puts the file where `systemd.packages` does not look. The rest of your desktop units come from chezmoi in `~/.config/systemd/user`. |
+| | `udisks2` and `gvfs` for removable media. The dconf theme, fonts, and the desktop packages (waybar, launcher, theme and cursor packages). |
+| `modules/cli.nix` | `services.envfs`, `programs.nix-ld`: make generic Linux binaries and `#!/bin/bash` scripts work. Chapter 4 explains both. Also the command-line system packages, including vortix. |
+| `modules/apps.nix` | The GUI apps in `environment.systemPackages`, merged into `/run/current-system/sw`. Includes three local packages (`packages.helium`, `packages.claude-desktop`, `packages.grok-bot`) and voxtype's ONNX build from its own flake (`inputs.voxtype.packages.<system>.onnx`). |
+| `modules/tools.nix` | Builds `packages.tools` from nixos-unstable and installs it, with crib, through a NixOS module. See below. |
+| `modules/hosts/x1/disko.nix` | `disko.devices` for the disk layout, and `services.snapper.configs.home`: manual snapshots of `/home` only, at most 10. |
 
-### The three packages in pkgs/
+### The packages in modules/pkgs/
 
-All three take a vendor binary (a tarball or a .deb) and wrap it with `buildFHSEnv`. That wrapper starts the app inside a bubblewrap sandbox with a normal `/usr` and `/lib` built from nixpkgs, so the prebuilt Electron or Chromium binary finds its libraries. Chapter 7 walks through `pkgs/helium.nix` line by line.
+Four files, one package each. `helium.nix`, `claude-desktop.nix` and `grok-bot.nix` take a vendor binary (a tarball or a .deb) and wrap it with `buildFHSEnv`. That wrapper starts the app inside a bubblewrap sandbox with a normal `/usr` and `/lib` built from nixpkgs, so the prebuilt Electron or Chromium binary finds its libraries. `crib.nix` only installs the crib binary from its release tarball. Chapter 7 walks through `modules/pkgs/helium.nix` line by line.
+
+Each file has the same shape: a flake-parts module whose `perSystem` defines `packages.<name> = pkgs.callPackage ( … ) { };`. The function inside the parentheses is the package, unchanged from a standalone package file. flake-parts builds it for each system in `systems`, so these are flake outputs: `nix build ~/.local/share/chezmoi/nixos#helium` builds one without a rebuild of the system. `apps.nix` and `tools.nix` reach them as `packages.helium` and so on, from `packages = self.packages.${pkgs.stdenv.hostPlatform.system};`.
+
+`modules/tools.nix` is not a package wrapper but it also defines a package. It has two parts. Its `perSystem` imports nixos-unstable and builds `packages.tools`, one `buildEnv` of the command-line tools that move faster than 26.05 (neovim, claude-code, uv, devenv and so on), with agent-browser wrapped to drop `LD_LIBRARY_PATH`. Its `flake.modules.nixos.tools` puts `packages.tools` and `packages.crib` into `environment.systemPackages`.
 
 ## 04 · Where things live
 
@@ -421,7 +480,7 @@ The default library list is small. When a binary needs more (libGL, X11, GTK, AL
 
 envfs is a FUSE filesystem on `/usr/bin` and `/bin`. When something opens `/usr/bin/python3` or `/bin/bash`, envfs answers with whatever `python3` or `bash` is on the calling process's PATH. That is why `#!/bin/bash` scripts and Makefiles that hard-code `/usr/bin/git` keep working. envfs provides executables only. `/usr/lib` and `/usr/share` stay absent.
 
-The third mechanism is `buildFHSEnv`, used by your three apps in `pkgs/`. It gives one app a private, complete `/usr` inside a sandbox. nix-ld is global and light, and you list the libraries yourself. An FHS env is per app and complete.
+The third mechanism is `buildFHSEnv`, used by your three apps in `modules/pkgs/`. It gives one app a private, complete `/usr` inside a sandbox. nix-ld is global and light, and you list the libraries yourself. An FHS env is per app and complete.
 
 ### State NixOS does not manage
 
@@ -473,7 +532,7 @@ rec { a = 1; b = a + 1; }                     # { a = 1; b = 2; }
 let s = { x = 1; y = 2; }; in with s; x + y   # 3      with brings s's names into scope
 ```
 
-In your files: `pkgs/helium.nix` uses `let version = "0.20.2.1"; unpacked = …; in …` and `inherit version;`. `disko.nix` uses `let btrfsOptions = [ … ]; in`. `configuration.nix` uses `with pkgs; [ git vim … ]` so you can write `git` instead of `pkgs.git`.
+In your files: `modules/pkgs/helium.nix` uses `let version = "0.20.2.1"; unpacked = …; in …` and `inherit version;`. `modules/hosts/x1/disko.nix` uses `let btrfsOptions = [ … ]; in`. `modules/cli.nix` uses `with pkgs; [ git vim … ]` so you can write `git` instead of `pkgs.git`.
 
 > **with has the lowest priority.** `let x = 1; in with { x = 2; }; x` is `1`. A local name always beats a name from `with`. It also hides where a name came from, so a typo in `systemPackages` shows up only at evaluation as `undefined variable 'foo'`.
 
@@ -492,9 +551,9 @@ A function has exactly one argument, written `arg: body`. Multiple arguments are
 
 Your files are functions of this kind:
 
-- `configuration.nix` starts with `{ pkgs, ... }:`. The module system calls it with `config`, `lib`, `pkgs`, `options`, `modulesPath` and more. You list what you use. The `...` is required, or the extra arguments are rejected.
-- `flake.nix`: `outputs = { nixpkgs, nixos-hardware, disko, ... }:`. The `...` hides `self`.
-- `pkgs/helium.nix` starts with `{ stdenvNoCC, fetchurl, buildFHSEnv, appimageTools, }:`. `callPackage` fills those in from `pkgs` by name.
+- `modules/cli.nix` is a function of `{ inputs, ... }:` whose NixOS module is itself a function of `{ pkgs, ... }:`. flake-parts calls the outer one with `inputs` and `self`. The module system calls the inner one with `config`, `lib`, `pkgs`, `options`, `modulesPath` and more. You list what you use. The `...` is required, or the extra arguments are rejected.
+- `flake.nix`: `outputs = inputs: …`. It takes the whole inputs set as one argument and hands it to `mkFlake`.
+- `modules/pkgs/helium.nix` has a function inside `pkgs.callPackage ( … ) { }` that starts with `{ stdenvNoCC, fetchurl, buildFHSEnv, appimageTools, }:`. `callPackage` fills those in from `pkgs` by name.
 
 ### The list gotcha: calls inside lists need parentheses
 
@@ -505,7 +564,7 @@ Function application is just a space, and list elements are separated by spaces.
 [ (builtins.add 1 2) ]     # [ 3 ]
 ```
 
-That is why your package list says `(callPackage ../../pkgs/helium.nix { })` and `(voxtype.override { onnxSupport = true; })`. Without the parentheses each would be three separate list elements and the build would fail with a type error.
+That is why a call you add to a package list needs parentheses, for example `(callPackage ./foo.nix { })` or `(voxtype.override { onnxSupport = true; })`. Without them each would be three separate list elements and the build would fail with a type error. Your lists in `modules/apps.nix` need none: `packages.helium` is an attribute lookup, not a call, and the call already happened in `modules/pkgs/helium.nix`.
 
 Two smaller traps: `1/2` without spaces is a path, so write `1 / 2`. A hyphen is legal in names, so `x-1` is a variable called `x-1`. Write `x - 1`.
 
@@ -522,7 +581,7 @@ if 1 < 2 then "yes" else "no"                 # "yes"  else is required
 assert 1 == 2; 3                              # error: assertion '(1 == 2)' failed
 ```
 
-`pkgs/claude-desktop.nix` builds its arguments as `appimageTools.defaultFhsEnvArgs // { pname = …; … }`: take nixpkgs' default set and override a few keys. Because `//` is shallow, the file rebuilds `targetPkgs` as `defaultFhsEnvArgs.targetPkgs pkgs ++ [ extras ]` instead of merging it.
+`modules/pkgs/claude-desktop.nix` builds its arguments as `appimageTools.defaultFhsEnvArgs // { pname = …; … }`: take nixpkgs' default set and override a few keys. Because `//` is shallow, the file rebuilds `targetPkgs` as `defaultFhsEnvArgs.targetPkgs pkgs ++ [ extras ]` instead of merging it.
 
 ### import and laziness
 
@@ -540,7 +599,7 @@ Laziness is why `nix eval ~/.local/share/chezmoi/nixos#nixosConfigurations.x1.co
 
 ### String context: how dependencies are tracked
 
-When you interpolate a package into a string, the string remembers that package. Anything built from that string depends on it. In `pkgs/claude-desktop.nix`, `runScript = "${unpacked}/usr/lib/claude-desktop/claude-desktop …"` both produces a path and records that the launcher needs `unpacked`. Nix builds `unpacked` first and keeps it alive as long as the launcher exists. A store path pasted as a plain literal (`"/nix/store/abc…-foo"`) has no context, so Nix does not know about the dependency and may garbage-collect it.
+When you interpolate a package into a string, the string remembers that package. Anything built from that string depends on it. In `modules/pkgs/claude-desktop.nix`, `runScript = "${unpacked}/usr/lib/claude-desktop/claude-desktop …"` both produces a path and records that the launcher needs `unpacked`. Nix builds `unpacked` first and keeps it alive as long as the launcher exists. A store path pasted as a plain literal (`"/nix/store/abc…-foo"`) has no context, so Nix does not know about the dependency and may garbage-collect it.
 
 ### builtins, lib and pkgs
 
@@ -563,7 +622,7 @@ lib.callPackageWith { x = 1; } ({ x, wget }: x) { }
 # error: Function called without required argument "wget"
 ```
 
-`pkgs.callPackage` is exactly `lib.callPackageWith pkgs`. That is how `pkgs/helium.nix` receives `stdenvNoCC`, `fetchurl`, `buildFHSEnv` and `appimageTools` without you passing them.
+`pkgs.callPackage` is exactly `lib.callPackageWith pkgs`. That is how `modules/pkgs/helium.nix` receives `stdenvNoCC`, `fetchurl`, `buildFHSEnv` and `appimageTools` without you passing them.
 
 ### Syntax checklist
 
@@ -603,36 +662,37 @@ let cfg = config.services.tlp; in
 }
 ```
 
-*yours: configuration.nix*
+*yours: modules/laptop.nix (shortened)*
 
 ``` nix
-{ pkgs, ... }:
 {
-  services.tlp = {
-    enable = true;
-    settings = {
-      START_CHARGE_THRESH_BAT0 = 55;
-      STOP_CHARGE_THRESH_BAT0 = 60;
-      USB_EXCLUDE_BTUSB = 1;
+  flake.modules.nixos.laptop = {
+    services.tlp = {
+      enable = true;
+      settings = {
+        START_CHARGE_THRESH_BAT0 = 55;
+        STOP_CHARGE_THRESH_BAT0 = 60;
+        USB_EXCLUDE_BTUSB = 1;
+      };
     };
   };
 }
 ```
 
-Your file has no `options` or `config` key, so everything in it counts as `config`. The `config` argument a module receives is the merged result of all modules. Laziness lets one module read a value another module sets.
+The flake-parts wrapper stores the module under `flake.modules.nixos.laptop`, and the host file imports it. The module itself has no `options` or `config` key, so everything in it counts as `config`. The `config` argument a module receives is the merged result of all modules. Laziness lets one module read a value another module sets.
 
 ### One option, followed to the file on disk
 
 **1: you set the option**
 
 ```
-  configuration.nix   services.tlp.settings = { START_CHARGE_THRESH_BAT0 = 55; ... }
+  modules/laptop.nix  services.tlp.settings = { START_CHARGE_THRESH_BAT0 = 55; ... }
 ```
 
 **2: the type merges every definition**
 
 ```
-  configuration.nix   services.tlp.settings = { START_...=55; STOP_...=60; USB_...=1 }
+  modules/laptop.nix  services.tlp.settings = { START_...=55; STOP_...=60; USB_...=1 }
   tlp.nix             services.tlp.settings = { CPU_SCALING_GOVERNOR_ON_AC = mkIf (null != null) ... }
   nixos-hardware      services.tlp.enable   = mkDefault true
                               │ attrsOf merges key by key; the mkIf false entries vanish
@@ -680,7 +740,7 @@ Each definition has a priority. The lowest number wins, and definitions with a h
 | Written as | Priority | Used for |
 |----|----|----|
 | `lib.mkForce v` | 50 | Override something a module set. |
-| `v` (plain) | 100 | Everything you write in configuration.nix. |
+| `v` (plain) | 100 | Everything you write in your module files. |
 | `lib.mkDefault v` | 1000 | Defaults that profiles like nixos-hardware set and you can override with a plain value. |
 | option's `default` | 1500 | Used when nobody sets it. |
 
@@ -746,41 +806,56 @@ error: hash mismatch in fixed-output derivation '/nix/store/...-claude-desktop_2
 
 If you trust the new file, copy the `got:` value into the `hash`.
 
-### pkgs/helium.nix, line by line
+### modules/pkgs/helium.nix, line by line
 
-*pkgs/helium.nix*
+*modules/pkgs/helium.nix*
 
 ``` nix
-{ stdenvNoCC, fetchurl, buildFHSEnv, appimageTools, }:   # filled in by callPackage
+{
+  perSystem =
+    { pkgs, ... }:
+    {
+      packages.helium = pkgs.callPackage (
+        {
+          stdenvNoCC,
+          fetchurl,
+          buildFHSEnv,
+          appimageTools,
+        }:                                                  # filled in by callPackage
+        let
+          version = "0.20.2.1";
 
-let
-  version = "0.20.2.1";
-
-  unpacked = stdenvNoCC.mkDerivation {                    # derivation 1: the unpacked tarball
-    pname = "helium-unpacked";
-    inherit version;                                      # name: helium-unpacked-0.20.2.1
-    src = fetchurl {                                      # derivation 2: the download
-      url = "https://github.com/imputnet/helium-linux/releases/download/${version}/helium-${version}-x86_64_linux.tar.xz";
-      hash = "sha256-upKssn7GzaNqi5SOIVQAmq7g1jMiKtJEviXnNqFD5vo=";
+          unpacked = stdenvNoCC.mkDerivation {              # derivation 1: the unpacked tarball
+            pname = "helium-unpacked";
+            inherit version;                                # name: helium-unpacked-0.20.2.1
+            src = fetchurl {                                # derivation 2: the download
+              url = "https://github.com/imputnet/helium-linux/releases/download/${version}/helium-${version}-x86_64_linux.tar.xz";
+              hash = "sha256-upKssn7GzaNqi5SOIVQAmq7g1jMiKtJEviXnNqFD5vo=";
+            };
+            dontFixup = true;                               # leave the vendor binaries unpatched
+            installPhase = "cp -a . $out";                  # unpackPhase already extracted it
+          };
+        in
+        buildFHSEnv (                                       # derivation 3: the launcher
+          appimageTools.defaultFhsEnvArgs
+          // {
+            pname = "helium";
+            inherit version;
+            executableName = "helium-browser";
+            runScript = "${unpacked}/helium-wrapper";
+            extraInstallCommands = ''
+              mkdir -p $out/share/applications $out/share/icons/hicolor/256x256/apps
+              sed 's/^Exec=helium/Exec=helium-browser/' ${unpacked}/helium.desktop > $out/share/applications/helium.desktop
+              cp ${unpacked}/product_logo_256.png $out/share/icons/hicolor/256x256/apps/helium.png
+            '';
+          }
+        )
+      ) { };
     };
-    dontFixup = true;                                     # leave the vendor binaries unpatched
-    installPhase = "cp -a . $out";                        # unpackPhase already extracted it
-  };
-in
-buildFHSEnv (appimageTools.defaultFhsEnvArgs // {         # derivation 3: the launcher
-  pname = "helium";
-  inherit version;
-  executableName = "helium-browser";
-  runScript = "${unpacked}/helium-wrapper";
-  extraInstallCommands = ''
-    mkdir -p $out/share/applications $out/share/icons/hicolor/256x256/apps
-    sed 's/^Exec=helium/Exec=helium-browser/' ${unpacked}/helium.desktop > $out/share/applications/helium.desktop
-    cp ${unpacked}/product_logo_256.png $out/share/icons/hicolor/256x256/apps/helium.png
-  '';
-})
+}
 ```
 
-Comments added; the file itself has none. The `sed` renames the launcher in the desktop entry to match `executableName`.
+Comments added; the file itself has none. The outer `perSystem` and `pkgs.callPackage ( … ) { }` are the flake-parts wrapper: everything between the parentheses is the package function, the same code a standalone package file would hold. The `sed` renames the launcher in the desktop entry to match `executableName`.
 
 - `stdenvNoCC` is stdenv without a C compiler, enough for copying files.
 - The default `unpackPhase` recognizes the `.tar.xz` and changes into the extracted directory. `$out` is the output path, set by Nix.
@@ -792,7 +867,7 @@ Comments added; the file itself has none. The `sed` renames the launcher in the 
 
 1.  Change `version` (and `commit` for grok-bot).
 2.  Get the new hash: `nix store prefetch-file --json "<url>" | jq -r .hash`. Or set `hash = "";`, build, and copy the `got:` value from the error.
-3.  Build just that package before switching: `nixos-rebuild build --flake ~/.local/share/chezmoi/nixos#x1`.
+3.  Build just that package before switching: `nix build ~/.local/share/chezmoi/nixos#helium` (or `#claude-desktop`, `#grok-bot`, `#crib`). Then `nixos-rebuild build --flake ~/.local/share/chezmoi/nixos#x1` for the whole system.
 
 ### override and overrideAttrs
 
@@ -822,11 +897,15 @@ $ nix run nixpkgs#nix-tree -- /run/current-system           # interactive browse
 |----|----|
 | a shell script | `pkgs.writeShellScriptBin "name" ''…''` or `pkgs.writeShellApplication { name; runtimeInputs; text; }`, which also runs shellcheck |
 | a prebuilt CLI binary | `stdenv.mkDerivation` with `nativeBuildInputs = [ autoPatchelfHook ]` and the libraries in `buildInputs` |
-| a prebuilt GUI app (Electron, Chromium) | copy the pattern of `pkgs/helium.nix`: unpack, then `buildFHSEnv` |
+| a prebuilt GUI app (Electron, Chromium) | copy the pattern of `modules/pkgs/helium.nix`: unpack, then `buildFHSEnv` |
 | an AppImage | `appimageTools.wrapType2 { pname; version; src; }`, or `programs.appimage.enable = true; programs.appimage.binfmt = true;` to run any AppImage directly |
 | a Go, Rust or Python project from source | `buildGoModule`, `rustPlatform.buildRustPackage`, `python3Packages.buildPythonApplication`. Copy a similar package from `pkgs/by-name`. |
 
-Then add `(callPackage ../../pkgs/foo.nix { })` to `environment.systemPackages`, and `git add pkgs/foo.nix`, because the flake is in the chezmoi git repo.
+Then:
+
+1.  Create `modules/pkgs/foo.nix` in the same form as `modules/pkgs/crib.nix`: `{ perSystem = { pkgs, ... }: { packages.foo = pkgs.callPackage ( … ) { }; }; }`.
+2.  Add `packages.foo` to the `environment.systemPackages` list of a feature module that already has `packages = self.packages.${pkgs.stdenv.hostPlatform.system};`, such as `modules/apps.nix`.
+3.  `git add modules/pkgs/foo.nix`, because the flake is in the chezmoi git repo and import-tree only sees tracked files.
 
 ## 08 · Daily operations
 
@@ -888,20 +967,27 @@ $ git checkout flake.lock
 
 nixos-26.05 is a stable branch, so an update brings security and bug fixes, not new major versions. To move to the next release, change `nixos-26.05` to `nixos-26.11` in `flake.nix`, run `nix flake update`, read the release notes, and rebuild. Keep `system.stateVersion = "26.05"`.
 
-For one package newer than 26.05 has, add a second input and take only that package from it:
+For one package newer than 26.05 has, take it from the `nixpkgs-unstable` input. A module file gets `inputs` from flake-parts and imports unstable itself, the way `modules/tools.nix` does for its tools:
 
 ``` nix
-# flake.nix
-inputs.nixpkgs-unstable.url = "github:NixOS/nixpkgs/nixos-unstable";
-outputs = { nixpkgs, nixpkgs-unstable, ... }: {
-  nixosConfigurations.x1 = nixpkgs.lib.nixosSystem {
-    specialArgs = { unstable = nixpkgs-unstable.legacyPackages.x86_64-linux; };
-    modules = [ … ];
-  };
-};
-# configuration.nix
-{ pkgs, unstable, ... }: { environment.systemPackages = [ unstable.uv ]; }
+# modules/cli.nix, inside the NixOS module (shortened)
+{ inputs, ... }:
+{
+  flake.modules.nixos.cli =
+    { pkgs, ... }:
+    let
+      unstable = import inputs.nixpkgs-unstable {
+        system = pkgs.stdenv.hostPlatform.system;
+        config.allowUnfree = true;
+      };
+    in
+    {
+      environment.systemPackages = [ unstable.uv ];
+    };
+}
 ```
+
+`nixpkgs-unstable` is already an input of `flake.nix`, so nothing else changes. `modules/tools.nix` instead does the import in its `perSystem` and ships the result as `packages.tools`.
 
 ### Generations and disk space
 
@@ -929,7 +1015,7 @@ $ nix shell nixpkgs#nix-index -c nix-locate --top-level bin/convert   # which pa
 
 Typing a missing command does not suggest a package on this system: the classic command-not-found database is not shipped with flake-based nixpkgs. Use `nix-locate` as above, or [search.nixos.org](https://search.nixos.org/packages?channel=26.05) with channel 26.05.
 
-To install permanently, add the attribute name to `environment.systemPackages` in `configuration.nix` and switch. Avoid `nix profile add` and `nix-env -i`. They install imperatively into `~/.nix-profile`, outside the flake, and pin whatever nixpkgs revision was current at install time.
+To install permanently, add the attribute name to `environment.systemPackages` in a feature module such as `modules/cli.nix` and switch. Avoid `nix profile add` and `nix-env -i`. They install imperatively into `~/.nix-profile`, outside the flake, and pin whatever nixpkgs revision was current at install time.
 
 ### Common edits
 
@@ -1019,7 +1105,7 @@ First decide which stage failed (chapter 2): evaluation, build, activation, or b
    │     │     -> read the file:line in the message; --show-trace for the chain
    │     ├─ "builder for '/nix/store/...drv' failed"
    │     │     -> nix log /nix/store/...drv
-   │     └─ "hash mismatch"  -> update hash in pkgs/*.nix
+   │     └─ "hash mismatch"  -> update hash in modules/pkgs/*.nix
    │
    ├─ rebuild finished, "the following units failed" ... activation: new system is live
    │     -> systemctl status / journalctl -u ; fix forward or --rollback
@@ -1039,11 +1125,11 @@ Read from the bottom up. The last `error:` line is the cause. The lines above it
 
 | Message | Usual cause | Fix |
 |----|----|----|
-| `` The option `foo.bar' does not exist `` | typo, an option from another release, or a missing module import | check `man configuration.nix`; options from nixos-hardware or disko need their module in `flake.nix` |
+| `` The option `foo.bar' does not exist `` | typo, an option from another release, or a missing module import | check `man configuration.nix`; options from nixos-hardware or disko need their module imported in `modules/hosts/x1/configuration.nix` |
 | `` The option `x' has conflicting definition values `` | two modules set a single-value option differently | remove one, or `lib.mkForce` yours. The message lists both files. |
 | `undefined variable 'foo'` | a package name that is not in `pkgs`, often inside `with pkgs; [ … ]` | `nix search nixpkgs foo` for the real attribute name |
 | `attribute 'foo' missing` | same, written as `pkgs.foo` | same |
-| `path '…/hosts/x1/new.nix' does not exist` right after you created it | the file is not tracked by git | `git add hosts/x1/new.nix` |
+| `undefined variable 'gaming'` for a feature name you just created, or a new setting that has no effect | the new file under `modules/` is not tracked by git, so import-tree never sees it | `git add modules/gaming.nix` |
 | `syntax error, unexpected '}', expecting ';'` | missing `;` | add it on the line before |
 | `infinite recursion encountered` | an option defined in terms of itself, or `config` used to decide `imports` | `--show-trace`, look for the cycle |
 | `Package 'x' has an unfree license` | unfree outside the system `pkgs` (for example `legacyPackages` in a devShell) | `config.allowUnfree = true` on that import, or `NIXPKGS_ALLOW_UNFREE=1 … --impure` |
@@ -1100,7 +1186,7 @@ Always pass `--flake` to `nixos-option`. Without `/etc/nixos/flake.nix` it canno
 | `Could not start dynamically linked executable` | `ls -l /lib64/ld-linux-x86-64.so.2` should point at nix-ld | This message comes from the stock stub loader, so nix-ld is not in place. Check that `programs.nix-ld.enable` is set, switch, and on the first enable log in again. `echo $NIX_LD` should print a path. |
 | `error while loading shared libraries: libfoo.so.1` | `ldd ./bin | grep "not found"` | find the package with `nix-locate libfoo.so.1`, add it to `programs.nix-ld.libraries`, switch |
 | script fails on `/usr/share/…` or `/usr/lib/…` | `mount | grep envfs` | envfs only provides executables. Package the tool, or run it in a `buildFHSEnv` or `steam-run`. |
-| GUI app missing GL, GTK or X11 libraries | `LD_DEBUG=libs ./app 2>&1 | grep -i fail` | wrap it like `pkgs/helium.nix`, or `appimage-run` for AppImages |
+| GUI app missing GL, GTK or X11 libraries | `LD_DEBUG=libs ./app 2>&1 | grep -i fail` | wrap it like `modules/pkgs/helium.nix`, or `appimage-run` for AppImages |
 | mise wants to compile node or python | `mise settings get all_compile` | must be `false` (your chezmoi config sets it). Python with `compile = true` would need headers NixOS does not expose; use `uv python install` instead. |
 | nvim-treesitter cannot find `cc` | `command -v cc` | `gcc` is in `systemPackages` after the last change; switch to pick it up |
 
@@ -1357,7 +1443,7 @@ Tips that keep flakes pleasant:
 - Commit `flake.lock`. It is what makes the shell the same next month and on another machine.
 - `nixpkgs.legacyPackages.${system}` does not allow unfree packages. For those, use `import nixpkgs { inherit system; config.allowUnfree = true; }`.
 - Libraries and headers go in `packages` too (`openssl`, `pkg-config`, `postgresql`). mise cannot provide those. This is where Nix pays off.
-- Keep one shared template. You could add `templates.go-node = { path = ./templates/go-node; description = "…"; };` to `~/.local/share/chezmoi/nixos/flake.nix` and start projects with `nix flake init -t ~/.local/share/chezmoi/nixos#go-node`.
+- Keep one shared template. You could add `flake.templates.go-node = { path = ../templates/go-node; description = "…"; };` in a new module file `~/.local/share/chezmoi/nixos/modules/templates.nix` and start projects with `nix flake init -t ~/.local/share/chezmoi/nixos#go-node`.
 
 ### Per-directory variables: mise \[env\] versus direnv
 
@@ -1388,7 +1474,7 @@ PATH_add bin
 
 Both load on `cd` into the directory and undo on `cd` out. direnv asks you to run `direnv allow` once per `.envrc` and after each edit, so a cloned repo cannot run code in your shell without consent. Your `~/.zshrc` swaps `HISTFILE` and starship shows `AWS_PROFILE` based on mise `[env]`. With direnv the same `export` lines in `.envrc` do the job.
 
-To turn on direnv the NixOS way, add this to `configuration.nix`:
+To turn on direnv the NixOS way, add this to a feature module such as `modules/cli.nix`:
 
 ``` nix
 programs.direnv = {
@@ -1492,7 +1578,7 @@ $ sudo /usr/local/share/nix-entrypoint.sh
 | project needs native libraries, headers, pkg-config | flake devShell + direnv | libraries are ordinary packages in Nix; mise cannot provide them |
 | project needs Postgres or Redis and several processes | devenv, or compose inside a devcontainer | devenv has services and `devenv up` |
 | reproducible CI | `mise install --locked` or `nix develop` with `flake.lock` | mise pins binaries with checksums; Nix pins the whole toolchain including libraries |
-| a system tool or service on the x1 | `~/.local/share/chezmoi/nixos/hosts/x1/configuration.nix` | part of the OS, rolled back with it |
+| a system tool or service on the x1 | a feature module in `~/.local/share/chezmoi/nixos/modules/` (system packages: `cli.nix` or `apps.nix`) | part of the OS, rolled back with it |
 
 ### Can Nix replace mise for you?
 
@@ -1500,7 +1586,7 @@ Technically yes, at a real cost, so not yet. What you would gain: native librari
 
 - **Freshness.** Most of your mise tools are newer than nixpkgs 26.05 has them.
 - **Portability.** Without home-manager, mise is the only thing that installs the same tools on the x1, the Arch laptop and in containers from one file.
-- **Packaging work.** herdr and crib are not in nixpkgs at all, so you would maintain packages for them like `pkgs/helium.nix`.
+- **Packaging work.** herdr and crib are not in nixpkgs at all, so you would maintain packages for them like `modules/pkgs/helium.nix`.
 - **Upgrade speed.** Bumping one user tool would mean a system rebuild, or the imperative `nix profile`.
 
 | Tool | mise lock | nixpkgs 26.05 |
@@ -1534,7 +1620,7 @@ About seven hours of reading in total, spread over a week. Every step ends with 
 | \# | Time | Read | Then do on the x1 |
 |----|----|----|----|
 | 1 | 30 min | NixOS manual: "Changing the Configuration" and "Upgrading NixOS". Skip the installation chapters. | Add one package, `switch`, roll back, switch again. Watch `nixos-rebuild list-generations`. |
-| 2 | 90 min | [nix.dev: Nix language basics](https://nix.dev/tutorials/nix-language), the whole page. | Type every example into `nix repl`. Then read `pkgs/helium.nix` and `flake.nix` again without this page. |
+| 2 | 90 min | [nix.dev: Nix language basics](https://nix.dev/tutorials/nix-language), the whole page. | Type every example into `nix repl`. Then read `modules/pkgs/helium.nix` and `flake.nix` again without this page. |
 | 3 | 60 min | [nix.dev: module system](https://nix.dev/tutorials/module-system/) and the NixOS manual chapter "Writing NixOS Modules". | In `nixos-rebuild repl --flake ~/.local/share/chezmoi/nixos#x1`, trace `services.tlp.settings` and `boot.loader.limine` with `definitionsWithLocations`. |
 | 4 | 45 min | Man pages only: `man nixos-rebuild`, `man configuration.nix`, `nix flake --help`, `man nix3-why-depends`, `man nix3-store-diff-closures`, `man nix.conf`. | `nixos-rebuild build --flake ~/.local/share/chezmoi/nixos#x1` then `nix store diff-closures /run/current-system ./result`, and `sudo nixos-rebuild dry-activate --flake ~/.local/share/chezmoi/nixos#x1`. |
 | 5 | 30 min | [nix.dev: flakes](https://nix.dev/concepts/flakes) and [wiki: Flakes](https://wiki.nixos.org/wiki/Flakes). | `nix flake metadata ~/.local/share/chezmoi/nixos`, `nix flake show ~/.local/share/chezmoi/nixos`, then an update and a rollback of `flake.lock` with git. |
@@ -1553,7 +1639,7 @@ Skip for now: most of the Nixpkgs manual (use it for lookups only), cross-compil
 | `systemctl enable foo` | `services.foo.enable = true;`. `systemctl enable` of a system unit fails, because `/etc/systemd/system` is generated. User units in `~/.config/systemd/user` work as usual. |
 | `pacman -Syu` | `nix flake update`, then switch. Nothing changes until you switch. |
 | timeshift or a snapshot of `/` before updates | generations. Root does not need snapshots: the config and lock are the system. Back up `/home`, the flake, and the `/var/lib` paths from chapter 4. |
-| AUR | nixpkgs has most of it. For the rest, write a package in `pkgs/` like Helium. |
+| AUR | nixpkgs has most of it. For the rest, write a package in `modules/pkgs/` like Helium. |
 | `./configure && make install` | in a `nix shell` or devShell with the libraries, or in a devcontainer |
 | wiki first | options first: `man configuration.nix`, search.nixos.org, then the wiki |
 

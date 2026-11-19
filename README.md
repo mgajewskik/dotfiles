@@ -54,7 +54,7 @@ sh -c "$(curl -fsLS get.chezmoi.io)" -- -b ~/.local/bin init --apply mgajewskik
   - upgrade all: `mise lock -g --bump && mise install`
   - remove: delete it from the config, then `mise lock -g`
   - then `chezmoi add ~/.config/mise/mise.lock`
-- **Nix**, on NixOS: the same tools from nixos-unstable in `nixos/pkgs/tools.nix` (crib in `nixos/pkgs/crib.nix`),
+- **Nix**, on NixOS: the same tools from nixos-unstable in `nixos/modules/tools.nix` (crib in `nixos/modules/pkgs/crib.nix`),
   which x1 installs system-wide, chezmoi and mise included; jq comes from stable. A tool added
   to mise goes there too, then `nh os switch`. Moving a host over,
   devenv, and NixOS agent containers: [`nixos/devenv/README.md`](nixos/devenv/README.md).

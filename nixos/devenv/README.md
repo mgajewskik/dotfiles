@@ -4,13 +4,13 @@ Three pieces that let a NixOS host run without mise's global tools, and run a pr
 instead of a devcontainer:
 
 - **Nix tools.** On NixOS, my global tools come from one Nix package built from nixos-unstable
-  ([`../pkgs/tools.nix`](../pkgs/tools.nix)) instead of mise. x1 installs it system-wide; the containers below use
+  ([`../modules/tools.nix`](../modules/tools.nix)) instead of mise. x1 installs it system-wide; the containers below use
   the same build.
 - **devenv on the host.** devenv itself (from the same package), its zsh hook, and a short prompt inside its shells.
 - **The agent container ("box").** This folder is the example: a project's `devenv.nix` for its dependencies and
   services, and `.box/flake.nix` for a NixOS container that runs its agents, isolated from the rest of the
   machine. Its commands keep the secrets they pass in next to `.box/`: env values in `.box.env`, AWS credentials in
-  `.aws/`. x1 runs these containers through [`../hosts/x1/agentbox.nix`](../hosts/x1/agentbox.nix).
+  `.aws/`. x1 runs these containers through [`../modules/agentbox.nix`](../modules/agentbox.nix).
 
 mise and my devcontainers stay: on NixOS, mise only loses its global tools, and keeps working for projects' own
 `mise.toml` and in devcontainers. devenv only activates in projects I `devenv allow`, and a box exists only in
@@ -41,24 +41,35 @@ system evaluate, but nothing has been built or run from `main` yet; see [Before 
 
 | Input              | Branch          | What uses it                                                                               |
 | ------------------ | --------------- | ------------------------------------------------------------------------------------------ |
-| `nixpkgs`          | nixos-26.05     | the whole x1 system: `pkgs` in `configuration.nix`, every `with pkgs; [ ... ]` entry      |
-| `nixpkgs-unstable` | nixos-unstable  | `pkgsUnstable` in `configuration.nix`, and everything in `pkgs/tools.nix`                  |
+| `nixpkgs`          | nixos-26.05     | the whole x1 system: `pkgs` in every module under `../modules`, every `with pkgs; [ ... ]` entry |
+| `nixpkgs-unstable` | nixos-unstable  | `pkgsUnstable` in `../modules/tools.nix`, so everything in the `tools` package                   |
 
 So the file says where a package comes from:
 
 - `git`, `pkgs.git` or a bare name in `environment.systemPackages = with pkgs; [ ... ]`: stable.
-- Anything in `pkgs/tools.nix`: unstable, because `configuration.nix` builds it with
-  `(import ../../pkgs/tools.nix pkgsUnstable)`.
-- To take one more package from unstable, name it through `pkgsUnstable` in `configuration.nix`:
+- Anything in the `tools` list in `modules/tools.nix`: unstable, because its `perSystem` builds the package from
+  `pkgsUnstable`.
+- To take one more package from unstable on x1 only, take it from the input in that feature's module:
 
   ```nix
-  environment.systemPackages = with pkgs; [
-    git                      # nixos-26.05
-    pkgsUnstable.opentofu    # nixos-unstable
-  ];
+  { inputs, ... }:
+  {
+    flake.modules.nixos.cli =
+      { pkgs, ... }:
+      let
+        unstable = inputs.nixpkgs-unstable.legacyPackages.${pkgs.stdenv.hostPlatform.system};
+      in
+      {
+        environment.systemPackages = [
+          pkgs.git            # nixos-26.05
+          unstable.opentofu   # nixos-unstable
+        ];
+      };
+  }
   ```
 
-  A tool I want in the boxes too goes in `pkgs/tools.nix` instead.
+  `legacyPackages` has no `allowUnfree`; an unfree package needs `import inputs.nixpkgs-unstable { ... }` as in
+  `tools.nix`. A tool I want in the boxes too goes in the `tools` list instead.
 
 Don't list one program from both branches: NixOS merges `systemPackages` with collisions ignored, so one copy wins
 silently. That is why `neovim` left the stable list when `tools.nix` took it over.
@@ -75,7 +86,7 @@ nix eval --json ~/.local/share/chezmoi/nixos#packages.x86_64-linux.tools \
 `tools.nix` mirrors the `[tools]` of `dot_config/mise/config.toml.tmpl`, plus mise itself and devenv, except jq,
 which comes from the stable list (a box gets it from nixos-26.05 in its own flake). chezmoi and mise from Nix don't
 update themselves (`chezmoi upgrade`, `mise self-update`): they move with the flake like every other tool. crib is
-not in nixpkgs, so [`../pkgs/crib.nix`](../pkgs/crib.nix) installs its release binary on x1 only; containers skip
+not in nixpkgs, so [`../modules/pkgs/crib.nix`](../modules/pkgs/crib.nix) installs its release binary on x1 only; containers skip
 it, as the mise config does. When I add a tool to one list, I add it to the other. crib's version is pinned in `crib.nix`:
 for a new release, change `version`, set `hash = "";`, rebuild, and copy the hash from the error.
 
@@ -325,7 +336,7 @@ nix run path:.box       (#herdr is the same, with herdr as the program)
 - **`PRIVATE_USERS=pick`** gives the container its own uid range: root inside is an unused uid on the host.
 - **The network** is a veth pair (host 10.233.x.1, container 10.233.x.2) with NAT. The host drops everything from
   the container to itself and to private ranges, and new connections into it from anywhere but the host.
-- **Tools** are `nixos/pkgs/tools.nix`, the same store path x1 installs, in the container's system.
+- **Tools** are the `tools` package from `nixos/modules/tools.nix`, the same store path x1 installs, in the container's system.
 
 ## What survives
 
@@ -389,9 +400,11 @@ On a box created from `main`, in order:
 
 - **A box:** `nix run path:.box#destroy` in the project, then delete `.box/`, `.box.env` and `.aws/`; the last two
   may hold tokens and AWS credentials.
-- **Containers on x1:** remove `./agentbox.nix` from the imports in `configuration.nix`, then `nh os switch`.
-- **Nix tools on x1:** the dotfiles no longer install global tools with mise on NixOS, so removing
-  `(import ../../pkgs/tools.nix pkgsUnstable)` from `systemPackages` leaves x1 without them. Going back to mise means
+- **Containers on x1:** remove `agentbox` from the feature list in `modules/hosts/x1/configuration.nix`, then
+  `nh os switch`.
+- **Nix tools on x1:** the dotfiles no longer install global tools with mise on NixOS, so removing `tools` from the
+  feature list in `modules/hosts/x1/configuration.nix` leaves x1 without them, and without crib, which the same
+  module installs. Going back to mise means
   dropping the `.nixos` checks in `dot_config/mise/config.toml.tmpl`, `.chezmoiignore`,
   `.chezmoiexternals/mise.toml.tmpl`, `.chezmoitemplates/tool-exec` and the install-packages and claude-plugins
   scripts, then `chezmoi apply`, and putting `neovim` back on the stable list.

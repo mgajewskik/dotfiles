@@ -12,7 +12,7 @@
 #   host, as an untrusted user of the daemon.
 #
 # WHAT I GET INSIDE, as in my devcontainers
-#   - my tools: the package x1 installs from nixos-unstable (nixos/pkgs/tools.nix in my dotfiles: chezmoi, mise,
+#   - my tools: the package x1 installs from nixos-unstable (nixos/modules/tools.nix in my dotfiles: chezmoi, mise,
 #     neovim, herdr, claude, pi, agent-browser, gh, devenv, ...), plus jq from nixos-26.05, part of the system, so
 #     nothing downloads per container
 #   - my dotfiles: the first entry runs chezmoi init --apply from my dotfiles repo, as crib does
@@ -24,7 +24,7 @@
 #   - an AWS role's temporary credentials (awsRole below)
 #   - a desktop with chromium for the agent's browser, which I watch over VNC, clipboard shared
 #
-# WHAT THE AGENT INSIDE CAN AND CANNOT DO (with my host's nixos/hosts/x1/agentbox.nix applied)
+# WHAT THE AGENT INSIDE CAN AND CANNOT DO (with my host's nixos/modules/agentbox.nix applied)
 #   It runs as my uid 1000 inside, without sudo. It can:
 #     - read and write the project and its Claude sessions (the mounts below), and read my whole Nix store
 #     - read the env variables and any other mounts I pass in, and use the AWS role's credentials
