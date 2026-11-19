@@ -1,0 +1,5 @@
+.devenv*
+devenv.local.*
+.browser-profile
+.box.env
+.aws/

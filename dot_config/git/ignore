@@ -9,6 +9,8 @@ Session.vim
 .work/**
 .browser-profile/
 **/.devcontainer/aws/
+.box.env
+.aws/
 
 # Source
 # https://github.com/github/gitignore

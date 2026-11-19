@@ -2,7 +2,7 @@
 
 My shell, editor, terminal and Sway desktop setup, managed with [chezmoi](https://www.chezmoi.io/). One command sets
 up a desktop, a server or a container without asking anything, and [mise](https://mise.jdx.dev/) installs my tools at
-the versions pinned in a lockfile.
+the versions pinned in a lockfile. On NixOS, Nix installs them instead and mise stays for projects.
 
 ```mermaid
 flowchart LR
@@ -49,11 +49,15 @@ sh -c "$(curl -fsLS get.chezmoi.io)" -- -b ~/.local/bin init --apply mgajewskik
 
 ## Tools and plugins
 
-- **mise**, outside a container (containers lack crib, so locking there drops it):
+- **mise**, outside a container and not on NixOS (containers lack crib, so locking there drops it):
   - add: put it in `dot_config/mise/config.toml.tmpl`, then `chezmoi apply`
   - upgrade all: `mise lock -g --bump && mise install`
   - remove: delete it from the config, then `mise lock -g`
   - then `chezmoi add ~/.config/mise/mise.lock`
+- **Nix**, on NixOS: the same tools from nixos-unstable in `nixos/pkgs/tools.nix` (crib in `nixos/pkgs/crib.nix`),
+  which x1 installs system-wide, chezmoi and mise included; jq comes from stable. A tool added
+  to mise goes there too, then `nh os switch`. Moving a host over,
+  devenv, and NixOS agent containers: [`nixos/devenv/README.md`](nixos/devenv/README.md).
 - **yazi**: after `ya pkg add` or `ya pkg upgrade`, `chezmoi re-add ~/.config/yazi/package.toml`.
 - **herdr**: plugins are listed in `.chezmoiscripts/run_onchange_after_plugins_herdr.sh.tmpl`; changing its
   `refreshed:` date updates them all.
