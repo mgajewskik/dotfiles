@@ -6,9 +6,9 @@
 # named plugins_* to sort after install_packages, which installs claude
 
 set -uo pipefail
-
-MISE="{{ if $m := lookPath "mise" }}{{ $m }}{{ else }}{{ joinPath .chezmoi.homeDir ".local/bin/mise" }}{{ end }}"
-claude() { "$MISE" exec claude -- claude "$@"; }
+{{ if not .nixos }}
+claude() { {{ template "tool-exec" . }}claude "$@"; }
+{{- end }}
 
 failed=()
 {{- $settings := includeTemplate "claude/settings.json" . | fromJson }}
@@ -24,7 +24,7 @@ plugins=(
 {{- end }}{{ end }}
 )
 # install only missing plugins: installing again turns back on a plugin I disabled on this machine
-if installed="$(claude plugin list --json | "$MISE" exec jq -- jq -r '.[].id')"; then
+if installed="$(claude plugin list --json | {{ template "tool-exec" . }}jq -r '.[].id')"; then
   for plugin in "${plugins[@]}"; do
     grep -qxF -- "$plugin" <<<"$installed" && continue
     claude plugin install -s user "$plugin" || failed+=("$plugin")
@@ -40,7 +40,7 @@ claude mcp add -s user --transport http context7 https://mcp.context7.com/mcp ||
 # PR status footer off: it polls gh in the background, and where gh is not logged in (dev containers) that leaves
 # orphaned gh processes. The key lives in ~/.claude.json, which settings.json cannot set.
 config="$HOME/.claude.json"
-if (umask 077 && "$MISE" exec jq -- jq '.prStatusFooterEnabled = false' "$config" >"$config.tmp"); then
+if (umask 077 && {{ template "tool-exec" . }}jq '.prStatusFooterEnabled = false' "$config" >"$config.tmp"); then
   mv -- "$config.tmp" "$config"
 else
   rm -f -- "$config.tmp"

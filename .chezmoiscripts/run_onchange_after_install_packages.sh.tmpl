@@ -1,3 +1,4 @@
+{{ if not .nixos -}}
 #!/usr/bin/env bash
 # installs the mise tools at the versions pinned in mise.lock; re-runs when either changes
 # tools hash: {{ includeTemplate "dot_config/mise/config.toml.tmpl" . | sha256sum }}
@@ -9,3 +10,4 @@ set -euo pipefail
 MISE="{{ if $m := lookPath "mise" }}{{ $m }}{{ else }}{{ joinPath .chezmoi.homeDir ".local/bin/mise" }}{{ end }}"
 
 "$MISE" bootstrap
+{{ end -}}

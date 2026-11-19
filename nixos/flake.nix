@@ -3,6 +3,7 @@
 
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-26.05";
+    nixpkgs-unstable.url = "github:NixOS/nixpkgs/nixos-unstable";
     nixos-hardware = {
       url = "github:NixOS/nixos-hardware";
       inputs.nixpkgs.follows = "nixpkgs";
@@ -24,13 +25,22 @@
   outputs =
     inputs@{
       nixpkgs,
+      nixpkgs-unstable,
       nixos-hardware,
       disko,
       ...
     }:
+    let
+      pkgsUnstable = import nixpkgs-unstable {
+        system = "x86_64-linux";
+        config.allowUnfree = true;
+      };
+    in
     {
+      packages.x86_64-linux.tools = import ./pkgs/tools.nix pkgsUnstable;
+
       nixosConfigurations.x1 = nixpkgs.lib.nixosSystem {
-        specialArgs = { inherit inputs; };
+        specialArgs = { inherit inputs pkgsUnstable; };
         modules = [
           disko.nixosModules.disko
           nixos-hardware.nixosModules.lenovo-thinkpad-x1-extreme

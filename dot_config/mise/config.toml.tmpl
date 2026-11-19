@@ -5,6 +5,7 @@ all_compile = false
 
 [settings.github]
 credential_command = "gh auth token"
+{{- if not .nixos }}
 
 [tools]
 "github:twpayne/chezmoi" = "latest"
@@ -45,6 +46,7 @@ claude = "latest"
 "github:badlogic/pi-mono" = "latest"
 "github:vercel-labs/agent-browser" = "latest"
 "github:rtk-ai/rtk" = "latest"
+{{- end }}
 {{- if not .container }}
 
 [tasks.aws-devcontainer]

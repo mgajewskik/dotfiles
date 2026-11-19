@@ -1,0 +1,3 @@
+{{- /* exec --, not exec <tool>: for some tools the registry's backend is another than my github: one (agent-browser) */ -}}
+{{- if not .nixos -}}
+"{{ if $m := lookPath "mise" }}{{ $m }}{{ else }}{{ joinPath .chezmoi.homeDir ".local/bin/mise" }}{{ end }}" exec -- {{ end -}}

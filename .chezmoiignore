@@ -47,3 +47,7 @@ videos
 {{ if .container }}
 .config/crib
 {{ end }}
+
+{{ if .nixos }}
+.config/mise/mise.lock
+{{ end }}

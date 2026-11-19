@@ -17,7 +17,7 @@
 [merge]
 	conflictStyle = zdiff3
 
-# git diff via difftastic (structural diff, from mise); use git diff --no-ext-diff for a plain patch
+# git diff via difftastic (structural diff, from mise or, on NixOS, nix); use git diff --no-ext-diff for a plain patch
 [diff]
 	external = difft
 

@@ -8,7 +8,5 @@
 
 set -uo pipefail
 
-MISE="{{ if $m := lookPath "mise" }}{{ $m }}{{ else }}{{ joinPath .chezmoi.homeDir ".local/bin/mise" }}{{ end }}"
-
-"$MISE" exec neovim -- nvim --headless "+Lazy! restore" +qa \
+{{ template "tool-exec" . }}nvim --headless "+Lazy! restore" +qa \
   || echo "nvim plugins: install failed; retry with: nvim --headless '+Lazy! restore' +qa" >&2

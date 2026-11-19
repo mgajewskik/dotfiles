@@ -1,4 +1,4 @@
-{ inputs, lib, pkgs, ... }:
+{ inputs, lib, pkgs, pkgsUnstable, ... }:
 
 {
   imports = [
@@ -308,7 +308,6 @@
     gcc
     git
     vim
-    neovim
     wget
     curl
     file
@@ -385,6 +384,9 @@
     insync
     obsidian
     bitwarden-desktop
+
+    (import ../../pkgs/tools.nix pkgsUnstable)
+    (callPackage ../../pkgs/crib.nix { })
   ];
 
   system.stateVersion = "26.05";
