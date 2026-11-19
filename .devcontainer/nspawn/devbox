@@ -1,0 +1,70 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+here=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
+workspace=$(cd "$here/../.." && pwd -P)
+machine=$(basename "$workspace")
+base_root=/var/lib/machines/devbox-base
+machine_root=/var/lib/machines/$machine
+claude_project=$HOME/.claude/projects/${workspace//[^A-Za-z0-9]/-}
+settings_file=/run/systemd/nspawn/$machine.nspawn
+dropin_dir=/run/systemd/system/systemd-nspawn@$machine.service.d
+
+render() {
+  sed -e "s|@WORKSPACE@|$workspace|g" \
+    -e "s|@CLAUDE_PROJECT@|$claude_project|g" \
+    -e "s|@USER@|$USER|g" \
+    "$here/$1"
+}
+
+run_in() {
+  local root=$1
+  shift
+  sudo systemd-nspawn --quiet --settings=no -D "$root" "$@"
+}
+
+bootstrap() {
+  sudo mkdir -p "$base_root"
+  sudo pacstrap -c "$base_root" base base-devel sudo zsh git
+  run_in "$base_root" useradd -m -U -G wheel -u "$(id -u)" -d "$HOME" -s /bin/zsh "$USER"
+  echo '%wheel ALL=(ALL:ALL) NOPASSWD: ALL' | sudo install -m 0440 /dev/stdin "$base_root/etc/sudoers.d/wheel"
+}
+
+up() {
+  if [[ ! -d $base_root ]]; then
+    echo "$base_root is missing: run '$0 bootstrap' first" >&2
+    exit 1
+  fi
+  if systemctl is-active --quiet "systemd-nspawn@$machine.service"; then
+    echo "$machine is already running: run '$0 down' first" >&2
+    exit 1
+  fi
+  [[ -d $machine_root ]] || sudo machinectl clone devbox-base "$machine"
+  mkdir -p "$claude_project"
+  run_in "$machine_root" -u "$USER" mkdir -p "$workspace" "$claude_project"
+  render devbox-start.service | sudo install -m 0644 /dev/stdin "$machine_root/etc/systemd/system/devbox-start.service"
+  sudo systemctl --root="$machine_root" enable devbox-start.service
+  render devbox.nspawn | sudo install -D -m 0644 /dev/stdin "$settings_file"
+  sudo install -D -m 0644 "$here/limits.conf" "$dropin_dir/limits.conf"
+  sudo systemctl daemon-reload
+  sudo machinectl start "$machine"
+}
+
+shell() {
+  sudo machinectl shell "$USER@$machine" /usr/bin/env -C "$workspace" /bin/zsh -l
+}
+
+down() {
+  sudo systemctl stop "systemd-nspawn@$machine.service"
+  sudo rm -rf "$settings_file" "$dropin_dir"
+  sudo systemctl daemon-reload
+}
+
+case ${1:-} in
+  bootstrap | up | shell | down) "$1" ;;
+  render) render devbox.nspawn ;;
+  *)
+    echo "usage: $0 bootstrap|up|shell|down|render" >&2
+    exit 2
+    ;;
+esac

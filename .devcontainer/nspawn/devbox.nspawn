@@ -1,0 +1,12 @@
+[Exec]
+Boot=yes
+PrivateUsers=pick
+
+[Files]
+PrivateUsersOwnership=map
+Bind=@WORKSPACE@:@WORKSPACE@:idmap
+Bind=@CLAUDE_PROJECT@:@CLAUDE_PROJECT@:idmap
+
+[Network]
+Private=no
+VirtualEthernet=no

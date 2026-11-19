@@ -1,0 +1,11 @@
+[Unit]
+Description=Project start hook
+
+[Service]
+Type=oneshot
+User=@USER@
+WorkingDirectory=@WORKSPACE@
+ExecStart=@WORKSPACE@/.devcontainer/nspawn/on-start.sh
+
+[Install]
+WantedBy=multi-user.target
