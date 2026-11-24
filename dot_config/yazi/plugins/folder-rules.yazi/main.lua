@@ -4,12 +4,13 @@ local function setup()
    ps.sub("cd", function()
       -- https://yazi-rs.github.io/docs/plugins/context
       local cwd = cx.active.current.cwd
-      -- if cwd:ends_with("notes") then
       if tostring(cwd):find("obsidian") then
-         -- changing from mtime to btime for tests
-         ya.emit("sort", { "btime", reverse = true, dir_first = true })
+         -- Uncomment exactly one of these:
+         ya.emit("sort", { "btime", reverse = true, dir_first = true }) -- creation time, newest first
+         -- ya.emit("sort", { "mtime", reverse = true, dir_first = true }) -- modification time, newest first
       else
-         ya.emit("sort", { "alphabetical", reverse = false, dir_first = true })
+         -- Same as [mgr] in yazi.toml
+         ya.emit("sort", { "natural", reverse = false, dir_first = true })
       end
    end)
 end
