@@ -52,7 +52,7 @@ instructions=$(printf '%s\n' \
     'Inspect the repository before changing it; do not assume something is unimplemented.' \
     'Implement the task and run the relevant tests and checks.' \
     'Mark the task done in the plan and add any learning the next iteration needs under its Notes section. Keep notes short.' \
-    'Before committing, run the PASS-gate reviewer subagent and fix blockers until it returns PASS.' \
+    'Before committing, have the read-only subagent review the change following ~/.claude/skills/work/playbooks/review.md, and fix blockers until it returns PASS.' \
     'Only after PASS, commit the task. You are authorized to commit; do not push.' \
     'Stage only the files you changed, by path; never git add -A or git add . (the sandbox puts placeholder dotfiles in the repo).' \
     'IMPORTANT: every iteration must end with a new commit of PASS-reviewed work, or with <promise>BLOCKED</promise>. The loop counts commits and stops after 3 consecutive iterations without a new commit.' \
