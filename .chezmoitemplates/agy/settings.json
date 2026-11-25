@@ -125,7 +125,7 @@
     "toolPermission": "always-proceed"
   },
   "defaults": {
-    "model": "Gemini 4 Neon (XHigh)",
+    "model": "Gemini 4 Neon (High)",
     "agentMode": "accept-edits",
     "altScreenMode": "always"
   }
