@@ -1,0 +1,40 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+if (($# != 1)) || [[ ! -f $1 ]]; then
+  echo "usage: agy-review <brief-file>" >&2
+  exit 2
+fi
+
+brief="$(<"$1")"
+if [[ -z ${brief//[[:space:]]/} ]]; then
+  echo "agy-review: $1 is empty" >&2
+  exit 2
+fi
+
+run=(agy)
+command -v timeout >/dev/null && run=(timeout -k 30s 10m agy)
+# agy lists these skills to the model, and request-review mode denies reads outside the workspace with no output;
+# drop this when agy stops listing them or allows those reads.
+[[ -d $HOME/.agents/skills ]] && run+=(--add-dir "$HOME/.agents/skills")
+{{ if .container }}
+# --settings may replace the managed permissions rather than merge with them, so the deny list is carried over;
+# pass only write_file(*) once agy is known to merge them.
+settings="$(jq -ce '
+  if (.permissions.deny | type) == "array" and (.permissions.deny | length) > 0 then
+    {toolPermission: "always-proceed", permissions: {deny: (.permissions.deny + ["write_file(*)"])}}
+  else error("agy-review: no managed deny list in agy settings") end
+' "$HOME/.gemini/antigravity-cli/settings.json")"
+{{- else }}
+settings='{"toolPermission":"request-review"}'
+{{- end }}
+
+review="$("${run[@]}" --print="$brief" --model "Gemini 4 Neon (XHigh)" --output-format text \
+  --settings "$settings" --disable-slash-commands </dev/null)"
+
+if [[ -z ${review//[[:space:]]/} ]]; then
+  echo "agy-review: agy returned no review; a denied tool call ends the turn without output" >&2
+  exit 1
+fi
+
+printf '%s\n' "$review"
