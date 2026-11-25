@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
-# Codex-style status line for Claude Code. Reads session JSON on stdin and prints one line:
+# Codex-style status line for Claude Code and Antigravity CLI (agy's settings run this file too).
+# Reads session JSON on stdin and prints one line:
 # Opus high · Context 8% used · 5h 23% used · weekly 49% left · ~/.claude · main · No changes · PR #12 · my-session
-# Segments without data (rate limits before the first response, git outside a repo, no PR) are left out.
+# Segments without data (rate limits or quotas before the first response, git outside a repo, no PR or title) are left out.
 
 export LC_ALL=C # printf '%.0f' must parse "49.5" even under a comma-decimal locale
 
@@ -11,7 +12,7 @@ fg() { printf '\e[38;2;%d;%d;%dm' "0x${1:0:2}" "0x${1:2:2}" "0x${1:4:2}"; }
 # Kanagawa Wave palette (rebelot/kanagawa.nvim)
 RESET=$'\e[0m' BOLD=$'\e[1m'
 FUJI_GRAY=$(fg 727169)       # labels and separators
-OLD_WHITE=$(fg C8C093)       # session name
+OLD_WHITE=$(fg C8C093)       # session / conversation title
 CRYSTAL_BLUE=$(fg 7E9CD8)    # model
 SPRING_VIOLET2=$(fg 9CABCA)  # effort
 SPRING_BLUE=$(fg 7FB4CA)     # directory
@@ -36,17 +37,31 @@ usage_color() {
 # Gray label text, e.g. label "used"
 label() { printf '%s' "$FUJI_GRAY$1$RESET"; }
 
-eval "$(jq -r '@sh "
-  model=\(.model.display_name // "")
-  effort=\(.effort.level // "")
-  context=\(.context_window.used_percentage // 0)
-  five_hour=\(.rate_limits.five_hour.used_percentage // "")
-  weekly=\(.rate_limits.seven_day.used_percentage // "")
-  dir=\(.workspace.current_dir // .cwd // "")
-  pr_number=\(.pr.number // "")
-  pr_kind=\(.pr.kind // "")
-  session=\(.session_name // "")
-"')"
+eval "$(jq -r '
+  def quota_used($preferred; $regex):
+    (.quota // {}) as $q |
+    (
+      $q[$preferred].remaining_fraction
+      // ($q | to_entries | map(select((.key | test($regex)) and .value.remaining_fraction != null)) | .[0].value.remaining_fraction)
+    ) as $rem |
+    if $rem != null then ((1 - $rem) * 100) else "" end;
+
+  (.effort.level // .model.effort // "") as $eff |
+  (.model.display_name // "") as $raw_model |
+  (if ($raw_model | ascii_downcase | contains("claude")) then "claude" else "gemini" end) as $fam |
+  (if ($eff != "") then ($raw_model | sub("\\s*\\(" + $eff + "\\)$"; ""; "i")) else $raw_model end) as $clean_model |
+  @sh "
+    model=\($clean_model)
+    effort=\($eff)
+    context=\(.context_window.used_percentage // 0)
+    five_hour=\(.rate_limits.five_hour.used_percentage // quota_used($fam + "-5h"; "(-5h$|^five_hour$)"))
+    weekly=\(.rate_limits.seven_day.used_percentage // quota_used($fam + "-weekly"; "(-weekly$|^weekly$|^seven_day$)"))
+    dir=\(.workspace.current_dir // .cwd // "")
+    pr_number=\(.pr.number // "")
+    pr_kind=\(.pr.kind // "")
+    session=\(.session_name // .conversation_title // .title // "")
+  "
+')"
 
 parts=("$BOLD$CRYSTAL_BLUE$model$RESET${effort:+ $SPRING_VIOLET2$effort$RESET}")
 
@@ -63,20 +78,22 @@ if [[ -n $weekly ]]; then
   parts+=("$(label weekly) $(usage_color "$weekly")$((100 - weekly))%$RESET $(label left)")
 fi
 
-display_dir=$dir
-[[ $dir == "$HOME"* ]] && display_dir="~${dir#"$HOME"}"
-parts+=("$SPRING_BLUE$display_dir$RESET")
+if [[ -n $dir ]]; then
+  display_dir=$dir
+  [[ $dir == "$HOME"* ]] && display_dir="~${dir#"$HOME"}"
+  parts+=("$SPRING_BLUE$display_dir$RESET")
 
-if git -C "$dir" rev-parse --is-inside-work-tree &>/dev/null; then
-  branch=$(git -C "$dir" branch --show-current)
-  [[ -z $branch ]] && branch=$(git -C "$dir" rev-parse --short HEAD)
-  parts+=("$ONI_VIOLET$branch$RESET")
+  if git -C "$dir" rev-parse --is-inside-work-tree &>/dev/null; then
+    branch=$(git -C "$dir" branch --show-current)
+    [[ -z $branch ]] && branch=$(git -C "$dir" rev-parse --short HEAD)
+    parts+=("$ONI_VIOLET$branch$RESET")
 
-  changed=$(git -C "$dir" --no-optional-locks status --porcelain | wc -l)
-  if ((changed == 0)); then
-    parts+=("$(label 'No changes')")
-  else
-    parts+=("$SURIMI_ORANGE$changed changed$RESET")
+    changed=$(git -C "$dir" --no-optional-locks status --porcelain | wc -l)
+    if ((changed == 0)); then
+      parts+=("$(label 'No changes')")
+    else
+      parts+=("$SURIMI_ORANGE$changed changed$RESET")
+    fi
   fi
 fi
 

@@ -43,10 +43,14 @@ lazygit = "latest"
 lazyjournal = "latest"
 herdr = "latest"
 claude = "latest"
+antigravity-cli = "latest"
 "github:badlogic/pi-mono" = "latest"
 "github:vercel-labs/agent-browser" = "latest"
 "github:rtk-ai/rtk" = "latest"
 {{- end }}
+
+[env]
+AGY_CLI_DISABLE_AUTO_UPDATE = "true" # agy otherwise replaces its own binary, which belongs to mise or the Nix store
 {{- if not .container }}
 
 [tasks.aws-devcontainer]

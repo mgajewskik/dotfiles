@@ -57,6 +57,7 @@
           lazyjournal
           herdr
           claude-code
+          antigravity-cli
           pi-coding-agent
           agent-browser
           rtk

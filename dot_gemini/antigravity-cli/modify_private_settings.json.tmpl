@@ -1,0 +1,27 @@
+#!/usr/bin/env bash
+# chezmoi runs this before mise installs jq on a fresh machine, so a missing jq passes the file through unchanged.
+
+set -euo pipefail
+
+MISE="{{ if $m := lookPath "mise" }}{{ $m }}{{ else }}{{ joinPath .chezmoi.homeDir ".local/bin/mise" }}{{ end }}"
+if ! command -v jq >/dev/null; then
+  if [[ ! -x "$MISE" ]]; then
+    echo "modify_settings.json: no jq, ~/.gemini/antigravity-cli/settings.json left as is; run chezmoi apply again once mise installs jq" >&2
+    cat
+    exit 0
+  fi
+  jq() { "$MISE" exec jq -- jq "$@"; }
+fi
+
+current="$(cat)"
+[[ -n "${current//[[:space:]]/}" ]] || current="{}"
+repo="$(cat <<'SETTINGS'
+{{ includeTemplate "agy/settings.json" . }}
+SETTINGS
+)"
+
+jq --argjson repo "$repo" '
+  . + $repo.owned
+  | reduce ($repo.defaults | to_entries[]) as $default (.;
+      if has($default.key) then . else .[$default.key] = $default.value end)
+' <<<"$current"
