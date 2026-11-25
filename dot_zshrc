@@ -103,8 +103,7 @@ if command -v crib > /dev/null ; then
   }
 fi
 
-# agy has no setting for this flag, and an alias never reaches scripts such as agy-review, which must not write;
-# move it to agy's settings if they gain one that agy-review's --settings can override. Same check as .chezmoi.toml.tmpl.
+# agy has no setting for this flag. Same check as .chezmoi.toml.tmpl.
 if command -v agy > /dev/null && [[ -n $CODESPACES || -n $REMOTE_CONTAINERS || -n $KUBERNETES_SERVICE_HOST || -n $container ||
   -e /run/.containerenv || -e /.dockerenv || -e /run/systemd/container ]]; then
   alias agy="agy --dangerously-skip-permissions"

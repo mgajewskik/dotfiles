@@ -86,7 +86,6 @@
       "enabled": true,
       "failIfUnavailable": true,
       "allowUnsandboxedCommands": false,
-      "excludedCommands": ["agy-review *"],
       "filesystem": {
         "allowWrite": [
           "/tmp",
