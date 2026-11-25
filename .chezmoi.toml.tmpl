@@ -6,6 +6,12 @@
 
 sourceDir = {{ .chezmoi.sourceDir | quote }}
 
+# nvim rewrites lazy-lock.json locally, which blocks the --ff-only pull of the nvim external; stash it first.
+# Exits 0 before the first clone, since a failing pre hook aborts the update
+[hooks.update.pre]
+command = "sh"
+args = ["-c", "cd {{ .chezmoi.homeDir }}/.config/nvim 2>/dev/null || exit 0; git diff --quiet -- lazy-lock.json || git stash push -m 'chezmoi update: lazy-lock' -- lazy-lock.json"]
+
 [data]
 remote = {{ $remote }}
 container = {{ $container }}
