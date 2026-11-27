@@ -1,3 +1,4 @@
+{ inputs, ... }:
 {
   perSystem =
     { pkgs, ... }:
@@ -5,20 +6,16 @@
       packages.helium = pkgs.callPackage (
         {
           stdenvNoCC,
-          fetchurl,
           buildFHSEnv,
           appimageTools,
         }:
         let
-          version = "0.20.2.1";
+          inherit (inputs._meta.helium) version;
 
           unpacked = stdenvNoCC.mkDerivation {
             pname = "helium-unpacked";
             inherit version;
-            src = fetchurl {
-              url = "https://github.com/imputnet/helium-linux/releases/download/${version}/helium-${version}-x86_64_linux.tar.xz";
-              hash = "sha256-upKssn7GzaNqi5SOIVQAmq7g1jMiKtJEviXnNqFD5vo=";
-            };
+            src = inputs.helium;
             dontFixup = true;
             installPhase = "cp -a . $out";
           };

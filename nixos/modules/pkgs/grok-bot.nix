@@ -1,3 +1,4 @@
+{ inputs, ... }:
 {
   perSystem =
     { pkgs, ... }:
@@ -5,22 +6,17 @@
       packages.grok-bot = pkgs.callPackage (
         {
           stdenvNoCC,
-          fetchurl,
           dpkg,
           buildFHSEnv,
           appimageTools,
         }:
         let
-          version = "0.77.0";
-          commit = "fe85646036572e2b9a531b337a0dcb56a32f9369";
+          inherit (inputs._meta.grok-bot) version;
 
           unpacked = stdenvNoCC.mkDerivation {
             pname = "grok-bot-unpacked";
             inherit version;
-            src = fetchurl {
-              url = "https://downloads.cursor.com/grokbot/stable/${commit}/linux/x64/grok-bot_${version}_amd64.deb";
-              hash = "sha256-t08SXmrfOiXSlu+ZpKAEerSxevv8jp/dqg5XHc7+Qzw=";
-            };
+            src = inputs.grok-bot;
             nativeBuildInputs = [ dpkg ];
             dontUnpack = true;
             dontFixup = true;

@@ -343,7 +343,7 @@ b
 
 **In your config:**
 
-- `modules/pkgs/helium.nix` builds a URL: `url = "https://github.com/imputnet/helium-linux/releases/download/${version}/helium-${version}-x86_64_linux.tar.xz";`.
+- `modules/pkgs/crib.nix` builds a URL: `url = "https://github.com/fgrehm/crib/releases/download/v${version}/crib_linux_amd64.tar.gz";`.
 - `modules/desktop.nix` mixes Nix and shell in one multi-line string:
 
   ```nix
@@ -585,7 +585,7 @@ nix-repl> { inherit (fakePkgs) git vim; }
   ```
 
   `inherit system;` passes the `system` this function received as an argument.
-- `modules/pkgs/helium.nix` puts `version = "0.20.2.1";` in a `let`, then uses `inherit version;` and `${version}` below it, so the version is written once.
+- `modules/pkgs/helium.nix` puts `inherit (inputs._meta.helium) version;` in a `let`, then uses `inherit version;` twice below it, so the version tack locked is read once.
 - `modules/apps.nix` binds `packages = self.packages.${pkgs.stdenv.hostPlatform.system};` so the list can say `packages.helium` instead of the long path.
 
 **Check yourself:** rewrite `{ name = name; version = version; }` with `inherit`.
@@ -764,7 +764,7 @@ nixpkgs is a function that takes settings and returns the package set.
 
 - `flake.nix`: `outputs = inputs: inputs.flake-parts.lib.mkFlake { inherit inputs; } (inputs.import-tree ./modules);`. `outputs` is a function of `inputs`. `mkFlake` is called with two arguments: the set `{ inherit inputs; }` and the result of calling `inputs.import-tree ./modules`, which needs parentheses so that it counts as one argument.
 - `modules/tools.nix`: `import inputs.nixpkgs-unstable { inherit system; config.allowUnfree = true; }` imports nixpkgs-unstable, then calls it with settings, exactly like `import <nixpkgs> { }` above.
-- `modules/pkgs/*.nix`: `pkgs.callPackage ( { stdenvNoCC, fetchurl, ... }: ... ) { }`. `callPackage` reads the names in the function's pattern, finds each of them in `pkgs`, and calls the function with them. The trailing `{ }` is the second argument, for overrides.
+- `modules/pkgs/crib.nix`: `pkgs.callPackage ( { stdenvNoCC, fetchurl }: ... ) { }`. `callPackage` reads the names in the function's pattern, finds each of them in `pkgs`, and calls the function with them. The trailing `{ }` is the second argument, for overrides.
 
 ```
 nix-repl> builtins.functionArgs ({ stdenvNoCC, fetchurl, extra ? null }: 1)

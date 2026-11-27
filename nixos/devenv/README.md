@@ -90,7 +90,7 @@ not in nixpkgs, so [`../modules/pkgs/crib.nix`](../modules/pkgs/crib.nix) instal
 it, as the mise config does. When I add a tool to one list, I add it to the other. crib's version is pinned in `crib.nix`:
 for a new release, change `version`, set `hash = "";`, rebuild, and copy the hash from the error.
 
-**Updating.** `nix flake update nixpkgs-unstable --flake ~/.local/share/chezmoi/nixos` bumps only the unstable tools,
+**Updating.** `cd ~/.local/share/chezmoi/nixos && tack update nixpkgs-unstable` bumps only the unstable tools,
 then `nh os switch` (or `sudo nixos-rebuild switch --flake ~/.local/share/chezmoi/nixos#x1`). nixos-unstable trails
 upstream releases; for a release from this morning, a project's `mise.toml` still works.
 
@@ -185,9 +185,10 @@ on x1 and in the boxes.
 
    `path:` makes Nix copy only `.box/` to the store, not the whole repository. It copies every file in that folder,
    ignored or not, and the store is readable by every user and every box, so the commands write secrets beside it,
-   never into it: `.box.env` and `.aws/`. The first run writes `.box/flake.lock`, which pins my tools and nixpkgs;
+   never into it: `.box.env` and `.aws/`. The first run writes `.box/flake.lock`, which pins my tools (and through them, nixpkgs);
    commit it with the project. `.box.env` and `.aws/` stay out of git (the example's `.gitignore` and my global
-   one). The box's nixpkgs follows the one in my NixOS flake, so the container shares x1's store paths.
+   one). The box takes its nixpkgs from my NixOS flake's `nixpkgs` output (the tack pin x1 builds from), so the container
+   shares x1's store paths.
 
 ## A day with it
 

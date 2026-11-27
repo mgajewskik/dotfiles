@@ -5,6 +5,10 @@
     {
       services.envfs.enable = true;
       programs.nix-ld.enable = true;
+      programs.tack = {
+        enable = true;
+        package = inputs.tack.packages.${pkgs.stdenv.hostPlatform.system}.tack;
+      };
 
       environment.systemPackages = with pkgs; [
         gcc

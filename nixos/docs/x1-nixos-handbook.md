@@ -40,7 +40,7 @@ $ sudo nixos-rebuild switch --flake ~/.local/share/chezmoi/nixos#x1
 # go back to the previous generation (until reboot; chapter 8 makes it stick)
 $ sudo nixos-rebuild switch --rollback
 # update all pinned inputs (nixpkgs, nixos-hardware, disko and the rest), then switch
-$ nix flake update --flake ~/.local/share/chezmoi/nixos
+$ cd ~/.local/share/chezmoi/nixos && tack update
 # run a tool once without installing it
 $ nix shell nixpkgs#ripgrep
 # look up any option, offline
@@ -126,7 +126,7 @@ An old generation still exists until garbage collection deletes it. Your config 
 | On Arch you… | On this NixOS you… | Why |
 |----|----|----|
 | `pacman -S foo` | add `foo` to `environment.systemPackages`, rebuild. Or `nix shell nixpkgs#foo` for a one-off. | The package list is part of the build. |
-| `pacman -Syu` | `nix flake update --flake ~/.local/share/chezmoi/nixos`, then `nixos-rebuild switch`. Two steps. | The update only changes `flake.lock`. Nothing on the system changes until you switch. |
+| `pacman -Syu` | `cd ~/.local/share/chezmoi/nixos && tack update`, then `nixos-rebuild switch`. Two steps. | The update only changes `.tack/pins.lock.json`. Nothing on the system changes until you switch. |
 | edit `/etc/foo.conf` | set the module option (`services.foo.settings`) or `environment.etc."foo.conf".text` | Most of `/etc` is symlinks into the read-only store. A hand edit fails or is replaced at the next switch. |
 | `systemctl enable foo` | `services.foo.enable = true;` | `/etc/systemd/system` is generated. `systemctl enable` of a system unit fails. User units, including those from `systemd.packages`, can still be enabled by hand. |
 | roll back with snap-pac snapshots | pick an older generation in the Limine menu, or `--rollback` | Old generations are complete systems. Root is not snapshotted, only `/home`. |
@@ -136,43 +136,45 @@ An old generation still exists until garbage collection deletes it. Your config 
 | edit `/etc/fstab` | edit `modules/hosts/x1/disko.nix` or `fileSystems.*` | disko generates the `fileSystems` entries from the disk layout. |
 | a broken update can leave a half-upgraded system | a broken config fails at evaluation, before anything changes | Nix evaluates and builds the whole new system first. Activation happens only after a successful build. |
 | disk space freed by removing packages | space is freed only by garbage collection | Old generations keep their packages alive. `nix-collect-garbage` deletes them. |
-| rolling release | stable branch `nixos-26.05`, with security and bug fixes until shortly after the next release | A major upgrade is a one-word edit in `flake.nix`. Never change `system.stateVersion`. |
+| rolling release | stable branch `nixos-26.05`, with security and bug fixes until shortly after the next release | A major upgrade is a one-word edit in `.tack/pins.toml`. Never change `system.stateVersion`. |
 
 > **Rollback does not cover data.** A generation contains software and generated config. It does not contain `/home`, `/var/lib` (Bluetooth pairings, CUPS printers, iwd Wi-Fi networks, service databases) or `/etc/shadow`. Snapper covers `/home`. Nothing covers `/var/lib` unless you back it up.
 
 ## 02 · From flake.nix to a running system
 
-`sudo nixos-rebuild switch --flake ~/.local/share/chezmoi/nixos#x1` does four things in order: it reads the flake and its lock, evaluates the configuration, builds or downloads everything, and activates the result. Seeing those as separate stages tells you where an error came from.
+`sudo nixos-rebuild switch --flake ~/.local/share/chezmoi/nixos#x1` does four things in order: it reads the flake and its pins, evaluates the configuration, builds or downloads everything, and activates the result. Seeing those as separate stages tells you where an error came from.
 
 **Stage 1: inputs**
 
 ```
-  ~/.local/share/chezmoi/nixos/flake.nix  --- asks for --->
+  ~/.local/share/chezmoi/nixos/.tack/pins.toml  --- asks for --->
       nixpkgs           github:NixOS/nixpkgs/nixos-26.05
       nixpkgs-unstable  github:NixOS/nixpkgs/nixos-unstable
       flake-parts       github:hercules-ci/flake-parts
-      import-tree       github:vic/import-tree
+      import-tree       github:vic/import-tree               newest v* release tag
       nixos-hardware    github:NixOS/nixos-hardware
-      disko             github:nix-community/disko/latest
-      voxtype           github:peteonrails/voxtype/v1.1.1
-      vortix            github:Harry-kp/vortix/v0.5.5
-  ~/.local/share/chezmoi/nixos/flake.lock --- pins each to an exact git commit + content hash
+      disko             github:nix-community/disko           newest v* release tag
+      voxtype           github:peteonrails/voxtype           newest v* release tag
+      vortix            github:Harry-kp/vortix               newest v* release tag
+      tack              github:manic-systems/tack            newest v* release tag
+  ~/.local/share/chezmoi/nixos/.tack/pins.lock.json --- pins each to an exact git commit + content hash
       nixpkgs           6f06d204...
       nixpkgs-unstable  04906337...
       flake-parts       ea2630b7...
       import-tree       eb1b52ea...
       nixos-hardware    04c6b94f...
       disko             de570873...
-      voxtype           014c5610...
-      vortix            628d1b2c...
+      voxtype           601091db...  (v1.3.1)
+      vortix            fd8504bb...  (v0.6.0)
+      tack              393ed432...
 ```
 
-The lock decides which nixpkgs you get. Until you run `nix flake update`, every rebuild uses the same versions, on any machine.
+`flake.nix` itself declares no inputs. It imports `.tack`, which hands it the pins above. The lock decides which nixpkgs you get. Until you run `tack update`, every rebuild uses the same versions, on any machine. [The tack guide](tack-guide.md) covers the workflow.
 
 **Stage 2: evaluation**
 
 ```
-  flake.nix   outputs = inputs: flake-parts.lib.mkFlake { inherit inputs; } (import-tree ./modules)
+  flake.nix   outputs: inputs.flake-parts.lib.mkFlake { inherit inputs; } (inputs.import-tree ./modules)
                     │
                     v
   import-tree collects every modules/**/*.nix  (each file is a flake-parts module)
@@ -241,8 +243,12 @@ The flake is one `flake.nix` plus a `modules/` directory. Every `.nix` file unde
 
 ```
 ~/.local/share/chezmoi/nixos/
-├── flake.nix                       inputs, and one line that loads modules/
-├── flake.lock                      exact commits of the eight inputs
+├── flake.nix                       outputs only, and one line that loads modules/
+├── flake.lock                      no inputs in it; tack keeps them elsewhere
+├── .tack/
+│   ├── pins.toml                   the nine inputs: url, follows, tag
+│   ├── pins.lock.json              exact commit and hash of each input
+│   └── default.nix                 tack's resolver, written by tack
 ├── modules/
 │   ├── flake-parts.nix             turns on flake.modules, sets systems = [ "x86_64-linux" ]
 │   ├── nix.nix                     nix settings, garbage collection, allowUnfree, nh
@@ -273,7 +279,8 @@ The flake is one `flake.nix` plus a `modules/` directory. Every `.nix` file unde
 │       └── crib.nix                crib, the devcontainer CLI, from its release tarball
 └── docs/
     ├── x1-nixos-handbook.md        this handbook
-    └── dendritic-flake-guide.md    why the flake is laid out this way
+    ├── dendritic-flake-guide.md    why the flake is laid out this way
+    └── tack-guide.md               how tack pins and updates the inputs
 ```
 
 ### flake.nix
@@ -284,40 +291,26 @@ The flake is one `flake.nix` plus a `modules/` directory. Every `.nix` file unde
 {
   description = "NixOS machines";
 
-  inputs = {
-    nixpkgs.url = "github:NixOS/nixpkgs/nixos-26.05";
-    nixpkgs-unstable.url = "github:NixOS/nixpkgs/nixos-unstable";
-    flake-parts = {
-      url = "github:hercules-ci/flake-parts";
-      inputs.nixpkgs-lib.follows = "nixpkgs";
-    };
-    import-tree.url = "github:vic/import-tree";
-    nixos-hardware = {
-      url = "github:NixOS/nixos-hardware";
-      inputs.nixpkgs.follows = "nixpkgs";
-    };
-    disko = {
-      url = "github:nix-community/disko/latest";
-      inputs.nixpkgs.follows = "nixpkgs";
-    };
-    voxtype = {
-      url = "github:peteonrails/voxtype/v1.1.1";
-      inputs.nixpkgs.follows = "nixpkgs";
-    };
-    vortix = {
-      url = "github:Harry-kp/vortix/v0.5.5";
-      inputs.nixpkgs.follows = "nixpkgs";
-    };
-  };
-
   outputs =
-    inputs: inputs.flake-parts.lib.mkFlake { inherit inputs; } (inputs.import-tree ./modules);
+    { self, ... }:
+    let
+      pins = import ./.tack;
+      # flake-parts builds inputs' and the default perSystem pkgs from self.inputs, which nix fills from flake.lock;
+      # under tack that lock is empty, so self.inputs must be the pins too.
+      inputs = pins // {
+        self = self // {
+          inputs = pins;
+        };
+      };
+    in
+    inputs.flake-parts.lib.mkFlake { inherit inputs; } (inputs.import-tree ./modules);
 }
 ```
 
-- `inputs` names eight other flakes. `nixos-26.05` is the stable branch, and `nixpkgs-unstable` is a second nixpkgs that only `modules/tools.nix` uses. The lock freezes the exact commit of each.
-- `inputs.nixpkgs.follows = "nixpkgs"` tells nixos-hardware, disko, voxtype and vortix to use your nixpkgs instead of locking their own. Without it you would download and evaluate a second nixpkgs. flake-parts only needs nixpkgs' `lib`, so it follows through `nixpkgs-lib`.
-- `outputs` is a function. Nix calls it with the fetched inputs and gets back an attribute set. Here the function does almost nothing: `flake-parts.lib.mkFlake` builds the attribute set from a list of modules, and `import-tree ./modules` is that list, every `.nix` file under `modules/`. Adding a file adds a module. Nothing lists the files.
+- There is no `inputs` block. The inputs are declared in `.tack/pins.toml`, one `[inputs.<name>]` table each with a `url`, and `import ./.tack` turns them into flake inputs. There are nine: eight other flakes, and tack itself. `nixos-26.05` is the stable branch, and `nixpkgs-unstable` is a second nixpkgs that only `modules/tools.nix` and the tack package use. `.tack/pins.lock.json` freezes the exact commit of each, and `tack update` rewrites it.
+- `follows = { nixpkgs = "nixpkgs" }` in a pin's table tells nixos-hardware, disko, voxtype and vortix to use your nixpkgs instead of locking their own. Without it you would download and evaluate a second nixpkgs. flake-parts only needs nixpkgs' `lib`, so it follows through `nixpkgs-lib`. tack's own nixpkgs follows `nixpkgs-unstable`, and its `tag = "v{version}"` makes it follow its newest release.
+- The `inputs = pins // { self = … }` line puts the pins into `self.inputs` as well. flake-parts reads `self.inputs`, which Nix normally fills from `flake.lock`. That lock has no inputs now, so without the line evaluation fails.
+- `outputs` is a function. Nix calls it with `self` and gets back an attribute set. Here the function does almost nothing: `flake-parts.lib.mkFlake` builds the attribute set from a list of modules, and `import-tree ./modules` is that list, every `.nix` file under `modules/`. Adding a file adds a module. Nothing lists the files.
 - `modules/flake-parts.nix` imports flake-parts' `modules` flake module, which adds the `flake.modules.<class>.<name>` option every feature file writes to, and sets `systems`.
 - The outputs come from the files. `modules/hosts/x1/configuration.nix` defines `nixosConfigurations.x1`, which is what `--flake ~/.local/share/chezmoi/nixos#x1` refers to. If you leave out `#x1`, nixos-rebuild uses the hostname, which is also `x1`. The `modules/pkgs/*.nix` files and `tools.nix` define `packages.<system>.*`, so `nix build ~/.local/share/chezmoi/nixos#helium` works too.
 - `nixosSystem` evaluates one module, `self.modules.nixos.x1`, together with all NixOS modules. That module imports the feature modules. There is no `system = "x86_64-linux"` in the `nixosSystem` call. The platform comes from `nixpkgs.hostPlatform` in `hardware.nix`.
@@ -532,7 +525,7 @@ rec { a = 1; b = a + 1; }                     # { a = 1; b = 2; }
 let s = { x = 1; y = 2; }; in with s; x + y   # 3      with brings s's names into scope
 ```
 
-In your files: `modules/pkgs/helium.nix` uses `let version = "0.20.2.1"; unpacked = …; in …` and `inherit version;`. `modules/hosts/x1/disko.nix` uses `let btrfsOptions = [ … ]; in`. `modules/cli.nix` uses `with pkgs; [ git vim … ]` so you can write `git` instead of `pkgs.git`.
+In your files: `modules/pkgs/helium.nix` uses `let inherit (inputs._meta.helium) version; unpacked = …; in …` and `inherit version;`. `modules/hosts/x1/disko.nix` uses `let btrfsOptions = [ … ]; in`. `modules/cli.nix` uses `with pkgs; [ git vim … ]` so you can write `git` instead of `pkgs.git`.
 
 > **with has the lowest priority.** `let x = 1; in with { x = 2; }; x` is `1`. A local name always beats a name from `with`. It also hides where a name came from, so a typo in `systemPackages` shows up only at evaluation as `undefined variable 'foo'`.
 
@@ -552,8 +545,8 @@ A function has exactly one argument, written `arg: body`. Multiple arguments are
 Your files are functions of this kind:
 
 - `modules/cli.nix` is a function of `{ inputs, ... }:` whose NixOS module is itself a function of `{ pkgs, ... }:`. flake-parts calls the outer one with `inputs` and `self`. The module system calls the inner one with `config`, `lib`, `pkgs`, `options`, `modulesPath` and more. You list what you use. The `...` is required, or the extra arguments are rejected.
-- `flake.nix`: `outputs = inputs: …`. It takes the whole inputs set as one argument and hands it to `mkFlake`.
-- `modules/pkgs/helium.nix` has a function inside `pkgs.callPackage ( … ) { }` that starts with `{ stdenvNoCC, fetchurl, buildFHSEnv, appimageTools, }:`. `callPackage` fills those in from `pkgs` by name.
+- `flake.nix`: `outputs = { self, ... }: …`. It builds the whole inputs set from the pins and hands it to `mkFlake`.
+- `modules/pkgs/helium.nix` has a function inside `pkgs.callPackage ( … ) { }` that starts with `{ stdenvNoCC, buildFHSEnv, appimageTools, }:`. `callPackage` fills those in from `pkgs` by name.
 
 ### The list gotcha: calls inside lists need parentheses
 
@@ -622,7 +615,7 @@ lib.callPackageWith { x = 1; } ({ x, wget }: x) { }
 # error: Function called without required argument "wget"
 ```
 
-`pkgs.callPackage` is exactly `lib.callPackageWith pkgs`. That is how `modules/pkgs/helium.nix` receives `stdenvNoCC`, `fetchurl`, `buildFHSEnv` and `appimageTools` without you passing them.
+`pkgs.callPackage` is exactly `lib.callPackageWith pkgs`. That is how `modules/pkgs/helium.nix` receives `stdenvNoCC`, `buildFHSEnv` and `appimageTools` without you passing them.
 
 ### Syntax checklist
 
@@ -799,18 +792,19 @@ The cost: changing a deep dependency like glibc changes the hash of everything a
 Downloads are the exception. A fetcher like `fetchurl` is a fixed-output derivation: you declare the content hash, the build may use the network, and the result must match. When upstream changes a file, you get:
 
 ``` sh
-error: hash mismatch in fixed-output derivation '/nix/store/...-claude-desktop_2.42304.0_amd64.deb.drv':
-         specified: sha256-dM0szCnSQWUUTkVcvIcsbMKiSiY7g+c0IOlfiRZtSqQ=
+error: hash mismatch in fixed-output derivation '/nix/store/...-crib_linux_amd64.tar.gz.drv':
+         specified: sha256-mmZV/X8BWP+wiFdfJOZlKlbTMSbRfQm0/UTpxP9CAOw=
             got:    sha256-...
 ```
 
-If you trust the new file, copy the `got:` value into the `hash`.
+If you trust the new file, copy the `got:` value into the `hash` in `modules/pkgs/crib.nix`. helium, claude-desktop and grok-bot are tack fixed pins instead: tack records their hashes in `.tack/pins.lock.json`.
 
 ### modules/pkgs/helium.nix, line by line
 
 *modules/pkgs/helium.nix*
 
 ``` nix
+{ inputs, ... }:                                            # the tack pins, from flake-parts
 {
   perSystem =
     { pkgs, ... }:
@@ -818,22 +812,18 @@ If you trust the new file, copy the `got:` value into the `hash`.
       packages.helium = pkgs.callPackage (
         {
           stdenvNoCC,
-          fetchurl,
           buildFHSEnv,
           appimageTools,
         }:                                                  # filled in by callPackage
         let
-          version = "0.20.2.1";
+          inherit (inputs._meta.helium) version;            # the release tack locked, e.g. 0.22.5.1
 
           unpacked = stdenvNoCC.mkDerivation {              # derivation 1: the unpacked tarball
             pname = "helium-unpacked";
-            inherit version;                                # name: helium-unpacked-0.20.2.1
-            src = fetchurl {                                # derivation 2: the download
-              url = "https://github.com/imputnet/helium-linux/releases/download/${version}/helium-${version}-x86_64_linux.tar.xz";
-              hash = "sha256-upKssn7GzaNqi5SOIVQAmq7g1jMiKtJEviXnNqFD5vo=";
-            };
+            inherit version;                                # name: helium-unpacked-0.22.5.1
+            src = inputs.helium;                            # derivation 2: the download, already extracted
             dontFixup = true;                               # leave the vendor binaries unpatched
-            installPhase = "cp -a . $out";                  # unpackPhase already extracted it
+            installPhase = "cp -a . $out";                  # unpackPhase copied the extracted folder in
           };
         in
         buildFHSEnv (                                       # derivation 3: the launcher
@@ -858,15 +848,17 @@ If you trust the new file, copy the `got:` value into the `hash`.
 Comments added; the file itself has none. The outer `perSystem` and `pkgs.callPackage ( … ) { }` are the flake-parts wrapper: everything between the parentheses is the package function, the same code a standalone package file would hold. The `sed` renames the launcher in the desktop entry to match `executableName`.
 
 - `stdenvNoCC` is stdenv without a C compiler, enough for copying files.
-- The default `unpackPhase` recognizes the `.tar.xz` and changes into the extracted directory. `$out` is the output path, set by Nix.
+- `inputs.helium` is a tack `fixed` pin with `unpack = "tarball"`: tack downloads the release tarball and extracts it, so `src` is a directory. The default `unpackPhase` copies it and changes into it. `$out` is the output path, set by Nix.
 - `dontFixup` skips the phase that would patchelf, strip and rewrite shebangs. The binaries run inside an FHS sandbox, so they need no patching.
 - `buildFHSEnv` creates `bin/helium-browser`, a script that starts `runScript` in a bubblewrap namespace with a normal `/usr` and `/lib`, populated from `targetPkgs`.
-- `grok-bot.nix` is the same with a .deb: `dontUnpack = true`, `nativeBuildInputs = [ dpkg ]`, `installPhase = "dpkg-deb -x $src $out"`. `claude-desktop.nix` extracts with `tar --no-same-permissions` because the build sandbox refuses the setuid `chrome-sandbox` file, and adds QEMU, virtiofsd and OVMF firmware for Cowork.
+- `grok-bot.nix` is the same with a .deb (a `fixed` pin with `unpack = "file"`, so `src` is the .deb itself): `dontUnpack = true`, `nativeBuildInputs = [ dpkg ]`, `installPhase = "dpkg-deb -x $src $out"`. `claude-desktop.nix` extracts with `tar --no-same-permissions` because the build sandbox refuses the setuid `chrome-sandbox` file, and adds QEMU, virtiofsd and OVMF firmware for Cowork.
 
 ### Updating one of your vendor apps
 
-1.  Change `version` (and `commit` for grok-bot).
-2.  Get the new hash: `nix store prefetch-file --json "<url>" | jq -r .hash`. Or set `hash = "";`, build, and copy the `got:` value from the error.
+helium, claude-desktop and grok-bot are tack `fixed` pins that follow the vendor's newest release, so they update with the other inputs. [The tack guide](tack-guide.md) shows where each one reads its releases from.
+
+1.  `cd ~/.local/share/chezmoi/nixos && tack update helium` (or `claude-desktop`, `grok-bot`). tack finds the newest release, downloads it and locks its hash.
+2.  crib stays pinned in `crib.nix`: change `version`, then get the new hash with `nix store prefetch-file --json "<url>" | jq -r .hash`, or set `hash = "";`, build, and copy the `got:` value from the error.
 3.  Build just that package before switching: `nix build ~/.local/share/chezmoi/nixos#helium` (or `#claude-desktop`, `#grok-bot`, `#crib`). Then `nixos-rebuild build --flake ~/.local/share/chezmoi/nixos#x1` for the whole system.
 
 ### override and overrideAttrs
@@ -957,15 +949,18 @@ The rollback window is the smaller of the 10 Limine entries and the 14 days that
 
 ``` sh
 $ cd ~/.local/share/chezmoi/nixos
-$ nix flake update                       # all inputs
-$ nix flake update nixpkgs               # just one
-$ git diff flake.lock                    # see the new revisions
+$ tack look                              # what an update would bring, writes nothing
+$ tack update                            # all inputs
+$ tack update nixpkgs                    # just one
+$ git diff .tack/pins.lock.json          # see the new revisions
 $ sudo nixos-rebuild switch --flake ~/.local/share/chezmoi/nixos#x1 --diff
 # undo the update before switching
-$ git checkout flake.lock
+$ tack undo
 ```
 
-nixos-26.05 is a stable branch, so an update brings security and bug fixes, not new major versions. To move to the next release, change `nixos-26.05` to `nixos-26.11` in `flake.nix`, run `nix flake update`, read the release notes, and rebuild. Keep `system.stateVersion = "26.05"`.
+Run tack from inside `~/.local/share/chezmoi/nixos`, or set `TACK_DIR`. `nix flake update` does nothing on this flake, because it has no flake inputs. [The tack guide](tack-guide.md) has the rest: holding an input back, adding one, rolling back.
+
+nixos-26.05 is a stable branch, so an update brings security and bug fixes, not new major versions. To move to the next release, change the nixpkgs `url` in `.tack/pins.toml` to `nixos-26.11`, run `tack update nixpkgs`, read the release notes, and rebuild. Keep `system.stateVersion = "26.05"`.
 
 For one package newer than 26.05 has, take it from the `nixpkgs-unstable` input. A module file gets `inputs` from flake-parts and imports unstable itself, the way `modules/tools.nix` does for its tools:
 
@@ -1283,6 +1278,7 @@ All links were checked on 2026-10-30. The NixOS and Nixpkgs manuals have no work
 | [Nix Pills](https://nixos.org/guides/nix-pills/) | how derivations and the store work underneath. Older style, deep model. |
 | [Zero to Nix](https://zero-to-nix.com/) | a flake-first beginner path |
 | [nixpkgs nixos/modules](https://github.com/NixOS/nixpkgs/tree/nixos-26.05/nixos/modules) · [pkgs/by-name](https://github.com/NixOS/nixpkgs/tree/nixos-26.05/pkgs/by-name) | the source, on your branch |
+| [tack docs](https://docs.manic.systems/tack) · [the tack guide](tack-guide.md) | how this flake's inputs are declared, locked and updated |
 | [nixos-hardware x1-extreme](https://github.com/NixOS/nixos-hardware/tree/master/lenovo/thinkpad/x1-extreme) · [disko docs](https://github.com/nix-community/disko/blob/master/docs/INDEX.md) | your two other inputs |
 | [NixOS Discourse](https://discourse.nixos.org/) | search before asking; announcements |
 
@@ -1623,7 +1619,7 @@ About seven hours of reading in total, spread over a week. Every step ends with 
 | 2 | 90 min | [nix.dev: Nix language basics](https://nix.dev/tutorials/nix-language), the whole page. | Type every example into `nix repl`. Then read `modules/pkgs/helium.nix` and `flake.nix` again without this page. |
 | 3 | 60 min | [nix.dev: module system](https://nix.dev/tutorials/module-system/) and the NixOS manual chapter "Writing NixOS Modules". | In `nixos-rebuild repl --flake ~/.local/share/chezmoi/nixos#x1`, trace `services.tlp.settings` and `boot.loader.limine` with `definitionsWithLocations`. |
 | 4 | 45 min | Man pages only: `man nixos-rebuild`, `man configuration.nix`, `nix flake --help`, `man nix3-why-depends`, `man nix3-store-diff-closures`, `man nix.conf`. | `nixos-rebuild build --flake ~/.local/share/chezmoi/nixos#x1` then `nix store diff-closures /run/current-system ./result`, and `sudo nixos-rebuild dry-activate --flake ~/.local/share/chezmoi/nixos#x1`. |
-| 5 | 30 min | [nix.dev: flakes](https://nix.dev/concepts/flakes) and [wiki: Flakes](https://wiki.nixos.org/wiki/Flakes). | `nix flake metadata ~/.local/share/chezmoi/nixos`, `nix flake show ~/.local/share/chezmoi/nixos`, then an update and a rollback of `flake.lock` with git. |
+| 5 | 30 min | [nix.dev: flakes](https://nix.dev/concepts/flakes) and [wiki: Flakes](https://wiki.nixos.org/wiki/Flakes). | `nix flake metadata ~/.local/share/chezmoi/nixos`, `nix flake show ~/.local/share/chezmoi/nixos`, then an update with `tack update` and a rollback of `.tack/pins.lock.json` with git. |
 | 6 | 30 min | NixOS manual: "Administration" and "Troubleshooting". The 26.05 release notes, only for options you use. | Boot an older generation once from the Limine menu, on purpose. |
 | 7 | 15 min each | Wiki pages for Btrfs, Limine, Podman, Nix-ld, Sway. disko docs. The nixos-hardware x1-extreme directory. | Confirm one wiki claim against `man configuration.nix` or the module source. |
 | 8 | when needed | [nix-direnv README](https://github.com/nix-community/nix-direnv) (10 min), then [devenv getting started](https://devenv.sh/getting-started/). | Stage 3 and 4 of the migration path in chapter 11. |
@@ -1637,7 +1633,7 @@ Skip for now: most of the Nixpkgs manual (use it for lookups only), cross-compil
 | `sudo pacman -S foo` | add `foo` to `environment.systemPackages`, switch. To try it: `nix shell nixpkgs#foo`. |
 | `sudo nvim /etc/foo.conf` | find the `services.foo` option. `/etc` is regenerated on every switch, and links into the store are read-only. |
 | `systemctl enable foo` | `services.foo.enable = true;`. `systemctl enable` of a system unit fails, because `/etc/systemd/system` is generated. User units in `~/.config/systemd/user` work as usual. |
-| `pacman -Syu` | `nix flake update`, then switch. Nothing changes until you switch. |
+| `pacman -Syu` | `cd ~/.local/share/chezmoi/nixos && tack update`, then switch. Nothing changes until you switch. |
 | timeshift or a snapshot of `/` before updates | generations. Root does not need snapshots: the config and lock are the system. Back up `/home`, the flake, and the `/var/lib` paths from chapter 4. |
 | AUR | nixpkgs has most of it. For the rest, write a package in `modules/pkgs/` like Helium. |
 | `./configure && make install` | in a `nix shell` or devShell with the libraries, or in a devcontainer |
@@ -1673,8 +1669,9 @@ sudo nixos-rebuild boot   --flake ~/.local/share/chezmoi/nixos#x1
 sudo nixos-rebuild switch --rollback
 nixos-rebuild list-generations
 # update
-nix flake update --flake ~/.local/share/chezmoi/nixos
-git -C ~/.local/share/chezmoi/nixos diff flake.lock
+cd ~/.local/share/chezmoi/nixos && tack look
+cd ~/.local/share/chezmoi/nixos && tack update
+git -C ~/.local/share/chezmoi/nixos diff .tack/pins.lock.json
 # preview
 nixos-rebuild build --flake ~/.local/share/chezmoi/nixos#x1
 nix store diff-closures /run/current-system ./result

@@ -1,0 +1,131 @@
+{
+  "$declared": {
+    "claude-desktop": "https://downloads.claude.ai/claude-desktop/apt/stable/pool/main/c/claude-desktop/{tag}",
+    "disko": "github:nix-community/disko",
+    "flake-parts": "github:hercules-ci/flake-parts",
+    "grok-bot": "https://downloads.cursor.com/grokbot/stable/{commit}/linux/x64/grok-bot_{version}_amd64.deb",
+    "helium": "https://github.com/imputnet/helium-linux/releases/download/{version}/helium-{version}-x86_64_linux.tar.xz",
+    "import-tree": "github:vic/import-tree",
+    "nixos-hardware": "github:NixOS/nixos-hardware",
+    "nixpkgs": "github:NixOS/nixpkgs/nixos-26.05",
+    "nixpkgs-unstable": "github:NixOS/nixpkgs/nixos-unstable",
+    "tack": "github:manic-systems/tack",
+    "vortix": "github:Harry-kp/vortix",
+    "voxtype": "github:peteonrails/voxtype"
+  },
+  "claude-desktop": {
+    "type": "fixed",
+    "url": "https://downloads.claude.ai/claude-desktop/apt/stable/pool/main/c/claude-desktop/claude-desktop_6.28899.6_amd64.deb",
+    "sha256": "sha256-fjgWAdhlcBSWQ9Uum4nCZXWrEvp4iqQf/dTMpbBjjPg=",
+    "unpack": "file",
+    "tag": "claude-desktop_6.28899.6_amd64.deb",
+    "version": "6.28899.6"
+  },
+  "disko": {
+    "type": "github",
+    "owner": "nix-community",
+    "repo": "disko",
+    "rev": "de5708739256238fb912c62f03988815db89ec9a",
+    "narHash": "sha256-CNzzBsRhq7gg4BMBuTDObiWDH/rFYHEuDRVOwCcwXw4=",
+    "lastModified": 1768920986,
+    "public": true,
+    "tag": "v1.13.0",
+    "version": "1.13.0"
+  },
+  "flake-parts": {
+    "type": "github",
+    "owner": "hercules-ci",
+    "repo": "flake-parts",
+    "rev": "ea2630b7470978622c7689a1ff75d2b389175399",
+    "narHash": "sha256-V1h85lUaJBQoHFrB2vpXZOE0Ju1MYSnIpsehoVZYlDo=",
+    "lastModified": 1793576659,
+    "public": true
+  },
+  "grok-bot": {
+    "type": "fixed",
+    "url": "https://downloads.cursor.com/grokbot/stable/bfb372966cec77c6ec2750957965f2a2268da17d/linux/x64/grok-bot_1.3.0_amd64.deb",
+    "sha256": "sha256-h7BGtuQSbD60Zt9ZE1tZyO+7X58Q4N5Ujw1l7IrFVSg=",
+    "unpack": "file",
+    "tag": "stable/bfb372966cec77c6ec2750957965f2a2268da17d/linux/x64/grok-bot_1.3.0_amd64.deb",
+    "version": "1.3.0"
+  },
+  "helium": {
+    "type": "fixed",
+    "url": "https://github.com/imputnet/helium-linux/releases/download/0.22.5.1/helium-0.22.5.1-x86_64_linux.tar.xz",
+    "sha256": "sha256-LVuh4DxNoGHemt8rcUuWerVbewF7N82TCA/bl8ADiIY=",
+    "unpack": "tarball",
+    "tag": "helium-0.22.5.1-x86_64_linux.tar.xz",
+    "version": "0.22.5.1"
+  },
+  "import-tree": {
+    "type": "github",
+    "owner": "vic",
+    "repo": "import-tree",
+    "rev": "eb1b52eaecc57f7c136d07ae8a93e724dfecac46",
+    "narHash": "sha256-ljEMTXP/rH0tOvDzc9gzwww6KcHRPRnEHzd9lK48V7s=",
+    "lastModified": 1788467110,
+    "public": true,
+    "tag": "v0.3.0",
+    "version": "0.3.0"
+  },
+  "nixos-hardware": {
+    "type": "github",
+    "owner": "NixOS",
+    "repo": "nixos-hardware",
+    "rev": "04c6b94fa104bc23650983a4513aea196794d321",
+    "narHash": "sha256-/Zs18x+IW4LuVH0rKxra0WPRgsk0DQsi0Bwkf8sOC5c=",
+    "lastModified": 1793355509,
+    "public": true
+  },
+  "nixpkgs": {
+    "type": "github",
+    "owner": "NixOS",
+    "repo": "nixpkgs",
+    "rev": "6f06d204d8f2d8761d9da78778745974a3216381",
+    "narHash": "sha256-loLMnbbS4KhmG2ln9EY6f0YMNCA273Yx02oWYQ9IMeE=",
+    "lastModified": 1793294725,
+    "public": true
+  },
+  "nixpkgs-unstable": {
+    "type": "github",
+    "owner": "NixOS",
+    "repo": "nixpkgs",
+    "rev": "04906337b6d53e8bb0eaf0470ae9f070a4d4eb55",
+    "narHash": "sha256-lME2lHoDHAaSHP3/okgiVoJ0icVEvsQH8LeU3We7tcc=",
+    "lastModified": 1794890597,
+    "public": true
+  },
+  "tack": {
+    "type": "github",
+    "owner": "manic-systems",
+    "repo": "tack",
+    "rev": "393ed432b3321a44a87e8a588552b51d5dad8f6e",
+    "narHash": "sha256-CUECELH3ty3Imlmbt88IC+ZkUxHPyd3FHuN9WWG4P+c=",
+    "lastModified": 1795730888,
+    "public": true,
+    "tag": "v2.0.0",
+    "version": "2.0.0"
+  },
+  "vortix": {
+    "type": "github",
+    "owner": "Harry-kp",
+    "repo": "vortix",
+    "rev": "fd8504bbc0d4b774f79fc78546ce5b66cd33ef10",
+    "narHash": "sha256-n9j2vej/oHQcDimiEKydOSeEJjTi8bE/o6Ar9tMnLt8=",
+    "lastModified": 1793564968,
+    "public": true,
+    "tag": "v0.6.0",
+    "version": "0.6.0"
+  },
+  "voxtype": {
+    "type": "github",
+    "owner": "peteonrails",
+    "repo": "voxtype",
+    "rev": "601091db2e4ac08cf28a32ab9d44ceb940be8a63",
+    "narHash": "sha256-VY6evn+fMTKKUYbaxaE+7uNgbvEXIjeUtWh58/8NNKU=",
+    "lastModified": 1795307680,
+    "public": true,
+    "tag": "v1.3.1",
+    "version": "1.3.1"
+  }
+}

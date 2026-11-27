@@ -1,3 +1,4 @@
+{ inputs, ... }:
 {
   perSystem =
     { pkgs, ... }:
@@ -5,7 +6,6 @@
       packages.claude-desktop = pkgs.callPackage (
         {
           stdenvNoCC,
-          fetchurl,
           dpkg,
           runCommand,
           buildFHSEnv,
@@ -13,15 +13,12 @@
           OVMF,
         }:
         let
-          version = "2.42304.0";
+          inherit (inputs._meta.claude-desktop) version;
 
           unpacked = stdenvNoCC.mkDerivation {
             pname = "claude-desktop-unpacked";
             inherit version;
-            src = fetchurl {
-              url = "https://downloads.claude.ai/claude-desktop/apt/stable/pool/main/c/claude-desktop/claude-desktop_${version}_amd64.deb";
-              hash = "sha256-dM0szCnSQWUUTkVcvIcsbMKiSiY7g+c0IOlfiRZtSqQ=";
-            };
+            src = inputs.claude-desktop;
             nativeBuildInputs = [ dpkg ];
             dontUnpack = true;
             dontFixup = true;

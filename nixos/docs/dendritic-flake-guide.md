@@ -142,8 +142,8 @@ When you run `nixos-rebuild switch`, Nix reads `flake.nix`, flake-parts evaluate
 
 `nh os switch` (or `sudo nixos-rebuild switch --flake ~/.local/share/chezmoi/nixos`) runs these steps:
 
-1. Nix copies the flake's git-tracked files to the store and reads `flake.lock` to fetch the pinned inputs.
-2. It calls `outputs`, which is `inputs.flake-parts.lib.mkFlake { inherit inputs; } (inputs.import-tree ./modules)`.
+1. Nix copies the flake's git-tracked files to the store. The flake declares no inputs; `import ./.tack` fetches the inputs pinned in `.tack/pins.lock.json` (see [tack-guide.md](tack-guide.md)).
+2. It calls `outputs`, which is `inputs.flake-parts.lib.mkFlake { inherit inputs; } (inputs.import-tree ./modules)`, with `inputs` built from those pins.
 3. import-tree lists every `.nix` file under `modules/`, skipping any path that contains `/_`.
 4. flake-parts evaluates those files as one module system. `modules/flake-parts.nix` enables `flake.modules` and sets `systems = [ "x86_64-linux" ]`.
 5. The tool picks a configuration name: the `#name` you passed, otherwise the machine's hostname. On x1 that is `x1`.
@@ -156,8 +156,9 @@ Errors in steps 2 to 4 point at a module file (a syntax error, a typo in an opti
 
 ```
 nixos/
-├── flake.nix                     inputs, and outputs = flake-parts + import-tree over ./modules
-├── flake.lock                    exact commit of every input
+├── flake.nix                     outputs = flake-parts + import-tree over ./modules, inputs from .tack
+├── flake.lock                    no inputs; tack pins them
+├── .tack/                        pins.toml (the inputs), pins.lock.json (exact commit of each), default.nix (resolver)
 ├── modules/                      every .nix file here is imported automatically
 │   ├── flake-parts.nix           enables flake.modules, sets systems = [ "x86_64-linux" ]
 │   ├── nix.nix                   nix settings, flakes, weekly gc, allowUnfree, nh
@@ -471,9 +472,13 @@ For one package on the host, read it from the input inside the feature that inst
 ### Update inputs
 
 ```sh
-nix flake update --flake ~/.local/share/chezmoi/nixos              # everything
-nix flake update nixpkgs --flake ~/.local/share/chezmoi/nixos      # one input
+cd ~/.local/share/chezmoi/nixos
+tack look                # what an update would bring
+tack update              # everything
+tack update nixpkgs      # one input
 ```
+
+[tack-guide.md](tack-guide.md) covers holding inputs back, adding them and rolling back.
 
 After a push, the agent container flake picks up the new tools with `nix flake update tools` in its `.box/`.
 

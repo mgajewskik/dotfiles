@@ -72,18 +72,18 @@
 # update; for the dotfiles, `chezmoi update` inside.
 {
   inputs = {
-    # my NixOS flake: its tools package, and the nixos-26.05 x1 runs, so the container shares x1's store paths
+    # my NixOS flake: its tools package, and the nixos-26.05 x1 runs (its tack-pinned nixpkgs output), so the container
+    # shares x1's store paths
     tools.url = "github:mgajewskik/dotfiles?dir=nixos";
-    nixpkgs.follows = "tools/nixpkgs";
   };
 
   outputs =
     {
       self,
-      nixpkgs,
       tools,
     }:
     let
+      nixpkgs = tools.nixpkgs;
       lib = nixpkgs.lib;
       pkgs = nixpkgs.legacyPackages.x86_64-linux;
       name = "myproj"; # the container's name: unique on my host, at most 11 characters
